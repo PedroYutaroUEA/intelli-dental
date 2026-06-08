@@ -3,15 +3,15 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-dental}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dental}
-      POSTGRES_DB: ${POSTGRES_DB:-dental_crm}
+      POSTGRES_USER: ${POSTGRES_USER:-intelli-dental}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-intelli-dental}
+      POSTGRES_DB: ${POSTGRES_DB:-intelli-dental}
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dental}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-intelli-dental}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -27,7 +27,7 @@ services:
     ports:
       - "8080:8080"
   # Run this locally with `ollama serve` for best performance. If you want to run it in Docker, uncomment this service and the corresponding volume, and make sure to pull the required models into the container (e.g. `ollama pull phi3:mini` and `ollama pull nomic-embed-text`).
-  # @TODO: Replace Ollama for a more lightweight, container-friendly LLM solution to simplify 
+  # @TODO: Replace Ollama for a more lightweight, container-friendly LLM solution to simplify
   #the stack and reduce resource usage.
 
   # ollama:
@@ -76,7 +76,7 @@ services:
     environment:
       PORT: 4000
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3567}
-      DATABASE_URL: postgres://${POSTGRES_USER:-dental}:${POSTGRES_PASSWORD:-dental}@postgres:5432/${POSTGRES_DB:-dental_crm}
+      DATABASE_URL: postgres://${POSTGRES_USER:-intelli-dental}:${POSTGRES_PASSWORD:-intelli-dental}@postgres:5432/${POSTGRES_DB:-intelli-dental}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
       RAG_URL: http://rag:3000
       RAG_AUTH_TOKEN: ${RAG_AUTH_TOKEN:-changeme}

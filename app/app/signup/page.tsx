@@ -1,43 +1,49 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useToast } from "@/hooks/use-toast"
-import { auth, authApi } from "@/lib/api-client"
-import { errorMessage } from "@/lib/errors"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { auth, authApi } from "@/lib/api-client";
+import { errorMessage } from "@/lib/errors";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function SignUpPage() {
-  const router = useRouter()
-  const { toast } = useToast()
+  const router = useRouter();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
     clinicName: "",
-  })
-  const [isLoading, setIsLoading] = useState(false)
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Erro",
         description: "As senhas não coincidem",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
       const { token, clinic } = await authApi.signup({
@@ -45,36 +51,40 @@ export default function SignUpPage() {
         password: formData.password,
         fullName: formData.name,
         clinicName: formData.clinicName,
-      })
-      auth.setToken(token)
-      auth.setClinicId(clinic.id)
+      });
+      auth.setToken(token);
+      auth.setClinicId(clinic.id);
       toast({
         title: "Conta criada!",
-        description: "Bem-vindo ao CRM Dental Inteligente",
-      })
-      router.push("/dashboard")
+        description: "Bem-vindo ao Intelli Dental",
+      });
+      router.push("/dashboard");
     } catch (err) {
       toast({
         title: "Falha no cadastro",
         description: errorMessage(err),
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-secondary flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-b from-white to-secondary flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2 text-center">
           <div className="flex justify-center mb-2">
             <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-2xl">D</span>
+              <span className="text-primary-foreground font-bold text-2xl">
+                D
+              </span>
             </div>
           </div>
           <CardTitle className="text-2xl">Crie sua conta</CardTitle>
-          <CardDescription>Comece a gerenciar sua clínica odontológica hoje</CardDescription>
+          <CardDescription>
+            Comece a gerenciar sua clínica odontológica hoje
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -84,7 +94,9 @@ export default function SignUpPage() {
                 id="name"
                 placeholder="Dr. João Silva"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 required
               />
             </div>
@@ -95,7 +107,9 @@ export default function SignUpPage() {
                 id="clinicName"
                 placeholder="Clínica Centro"
                 value={formData.clinicName}
-                onChange={(e) => setFormData({ ...formData, clinicName: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, clinicName: e.target.value })
+                }
                 required
               />
             </div>
@@ -107,7 +121,9 @@ export default function SignUpPage() {
                 type="email"
                 placeholder="joao@exemplo.com"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 required
               />
             </div>
@@ -119,7 +135,9 @@ export default function SignUpPage() {
                 type="password"
                 placeholder="••••••••"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
                 required
               />
             </div>
@@ -131,7 +149,9 @@ export default function SignUpPage() {
                 type="password"
                 placeholder="••••••••"
                 value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, confirmPassword: e.target.value })
+                }
                 required
               />
             </div>
@@ -143,12 +163,15 @@ export default function SignUpPage() {
 
           <div className="text-center text-sm text-muted-foreground">
             Já tem uma conta?{" "}
-            <Link href="/login" className="text-primary hover:underline font-medium">
+            <Link
+              href="/login"
+              className="text-primary hover:underline font-medium"
+            >
               Entrar
             </Link>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

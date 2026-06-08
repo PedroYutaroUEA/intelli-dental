@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ----------------------------------------------------------------------------
-# Dental-CRM bootstrap
+# Intelli Dental bootstrap
 #
 # - Ensures host Ollama is running and reachable from containers (0.0.0.0).
 # - Pulls required Ollama models (phi3:mini, nomic-embed-text).
@@ -18,7 +18,7 @@ cd "$ROOT_DIR"
 
 OLLAMA_PORT="${OLLAMA_PORT:-11434}"
 OLLAMA_MODELS=("phi3:mini" "nomic-embed-text")
-OLLAMA_LOG="${TMPDIR:-/tmp}/dental-crm-ollama.log"
+OLLAMA_LOG="${TMPDIR:-/tmp}/intelli-dental-ollama.log"
 
 c_red()    { printf '\033[31m%s\033[0m\n' "$*" >&2; }
 c_yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
@@ -124,7 +124,7 @@ docker compose up -d
 # ----------------------------------------------------------------------------
 step "Waiting for Postgres to become healthy"
 for _ in $(seq 1 60); do
-  status="$(docker inspect --format='{{.State.Health.Status}}' dental-crm-postgres-1 2>/dev/null || echo starting)"
+  status="$(docker inspect --format='{{.State.Health.Status}}' intelli-dental-postgres-1 2>/dev/null || echo starting)"
   if [[ "${status}" == "healthy" ]]; then break; fi
   sleep 1
 done
@@ -153,7 +153,7 @@ done
 # ----------------------------------------------------------------------------
 cat <<EOF
 
-$(c_green "Dental-CRM is up.")
+$(c_green "Intelli Dental is up.")
   • App:     http://localhost:3567
   • API:     http://localhost:4000/v1/health
   • RAG:     http://localhost:3000/v1/health
