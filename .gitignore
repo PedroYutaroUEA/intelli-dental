@@ -1,7 +1,7 @@
 # Dependencies
 **/node_modules
-**/.pnpm-store
-
+**/.pnpm-store/
+**/package-lock.json
 # Next.js
 app/.next/
 app/out/
@@ -22,6 +22,7 @@ Thumbs.db
 **/*.log
 **/npm-debug.log*
 **/pnpm-debug.log*
+**/pnpm-lock.yaml
 
 # Docker volumes (local)
 **/chroma-data/

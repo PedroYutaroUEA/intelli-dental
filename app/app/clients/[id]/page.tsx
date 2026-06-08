@@ -3,12 +3,27 @@
 import { useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { AppSidebar } from "@/components/app-sidebar"
+import {
+  AppointmentDialog,
+  statusLabel,
+  statusVariant,
+} from "@/components/appointment-dialog"
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import {
   ArrowLeft,
@@ -25,15 +40,23 @@ import {
   Clock,
   Eye,
   Pencil,
+  Copy,
+  Link2,
 } from "lucide-react"
 import { AuthGate } from "@/lib/auth-gate"
+import { useActiveClinic } from "@/lib/use-active-clinic"
 import {
   patientsApi,
   documentsApi,
+  clinicsApi,
+  bookingApi,
   type PatientSummary,
   type TimelineEntry,
   type PatientDocument,
   type IngestStatus,
+  type DentistSummary,
+  type AppointmentRecord,
+  type AppointmentStatus,
 } from "@/lib/api-client"
 import { errorMessage } from "@/lib/errors"
 
@@ -67,24 +90,30 @@ function ClientDetailInner() {
   const router = useRouter()
   const { toast } = useToast()
   const id = params.id
+  const { clinic } = useActiveClinic()
 
   const [patient, setPatient] = useState<PatientSummary | null>(null)
   const [timeline, setTimeline] = useState<TimelineEntry[]>([])
   const [documents, setDocuments] = useState<PatientDocument[]>([])
+  const [dentists, setDentists] = useState<DentistSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [editingAppt, setEditingAppt] = useState<AppointmentRecord | null>(null)
+
   async function loadAll() {
     try {
-      const [p, tl, docs] = await Promise.all([
+      const [p, tl, docs, ds] = await Promise.all([
         patientsApi.get(id),
         patientsApi.timeline(id).catch(() => [] as TimelineEntry[]),
         documentsApi.list(id).catch(() => [] as PatientDocument[]),
+        clinicsApi.listDentists().catch(() => [] as DentistSummary[]),
       ])
       setPatient(p)
       setTimeline(tl)
       setDocuments(docs)
+      setDentists(ds)
     } catch (err) {
       toast({
         title: "Falha ao carregar paciente",
@@ -148,6 +177,27 @@ function ClientDetailInner() {
       })
     }
   }
+
+  function upsertAppointmentInTimeline(saved: AppointmentRecord) {
+    setTimeline((prev) => {
+      const idx = prev.findIndex(
+        (e) => e.type === "appointment" && e.data.id === saved.id,
+      )
+      const entry: TimelineEntry = {
+        type: "appointment",
+        at: saved.startsAt,
+        data: saved,
+      }
+      if (idx === -1) return [entry, ...prev]
+      const copy = prev.slice()
+      copy[idx] = entry
+      return copy
+    })
+  }
+
+
+
+
 
   if (loading) {
     return (
@@ -396,6 +446,12 @@ function ClientDetailInner() {
               </TabsContent>
 
               <TabsContent value="appointments" className="space-y-4">
+                <div className="flex justify-end gap-2">
+                  <Button onClick={() => router.push(`/agendamentos/${id}`)}>
+                    <CalendarIcon className="w-4 h-4 mr-2" />
+                    Gerenciar consultas
+                  </Button>
+                </div>
                 {appointments.length === 0 ? (
                   <Card>
                     <CardContent className="py-8 text-center text-muted-foreground">
@@ -406,20 +462,35 @@ function ClientDetailInner() {
                   <div className="space-y-3">
                     {appointments.map((entry) => {
                       if (entry.type !== "appointment") return null
+                      const appt = entry.data
                       return (
-                        <Card key={entry.data.id}>
+                        <Card
+                          key={appt.id}
+                          className="cursor-pointer transition-colors hover:bg-muted/40"
+                          onClick={() => setEditingAppt(appt)}
+                        >
                           <CardHeader>
-                            <CardTitle className="text-base">
-                              {new Date(entry.data.startsAt).toLocaleString()}
-                            </CardTitle>
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-base">
+                                {new Date(appt.startsAt).toLocaleString()}
+                              </CardTitle>
+                              <Badge
+                                variant={statusVariant(
+                                  appt.status as AppointmentStatus,
+                                )}
+                              >
+                                {statusLabel(
+                                  appt.status as AppointmentStatus,
+                                )}
+                              </Badge>
+                            </div>
                             <CardDescription>
-                              Status: {entry.data.status}
-                              {entry.data.reason ? ` · ${entry.data.reason}` : ""}
+                              {appt.reason ? appt.reason : ""}
                             </CardDescription>
                           </CardHeader>
-                          {entry.data.notes ? (
+                          {appt.notes ? (
                             <CardContent>
-                              <p className="text-sm">{entry.data.notes}</p>
+                              <p className="text-sm">{appt.notes}</p>
                             </CardContent>
                           ) : null}
                         </Card>
@@ -432,6 +503,19 @@ function ClientDetailInner() {
           </div>
         </main>
       </div>
+
+      <AppointmentDialog
+        open={!!editingAppt}
+        onOpenChange={(o) => !o && setEditingAppt(null)}
+        mode="edit"
+        appointment={editingAppt}
+        patients={patient ? [patient] : []}
+        dentists={dentists}
+        onSaved={(a) => upsertAppointmentInTimeline(a)}
+        onCancelled={(a) => upsertAppointmentInTimeline(a)}
+      />
+
+
     </SidebarProvider>
   )
 }
