@@ -20,7 +20,11 @@ export function buildContextBlock(hits: QueryHit[]): string {
     .join("\n\n");
 }
 
-export function buildUserMessage(question: string, hits: QueryHit[], patientId: string): string {
+export function buildUserMessage(
+  question: string,
+  hits: QueryHit[],
+  patientId: string,
+): string {
   return `PATIENT_ID: ${patientId}
 
 CONTEXT:

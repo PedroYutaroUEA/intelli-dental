@@ -1,23 +1,31 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-} from "@/components/ui/sidebar"
-import { LayoutDashboard, Users, Calendar, LogOut, Building2, ClipboardList, Sparkles } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { auth } from "@/lib/api-client"
-import { useActiveClinic } from "@/lib/use-active-clinic"
+} from "@/components/ui/sidebar";
+import { auth } from "@/lib/api-client";
+import { useActiveClinic } from "@/lib/use-active-clinic";
+import {
+  Building2,
+  Calendar,
+  ClipboardList,
+  LayoutDashboard,
+  LogOut,
+  Sparkles,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 
 const menuItems = [
   { title: "Painel", icon: LayoutDashboard, href: "/dashboard" },
@@ -25,18 +33,18 @@ const menuItems = [
   { title: "Assistente", icon: Sparkles, href: "/assistant" },
   { title: "Agendamentos", icon: Calendar, href: "/agendamentos" },
   { title: "Minha Agenda", icon: ClipboardList, href: "/minha-agenda" },
-]
+];
 
 export function AppSidebar() {
-  const pathname = usePathname()
-  const router = useRouter()
-  const { clinic, loading } = useActiveClinic()
+  const pathname = usePathname();
+  const router = useRouter();
+  const { clinic, loading } = useActiveClinic();
 
   const handleLogout = (e: React.MouseEvent) => {
-    e.preventDefault()
-    auth.clear()
-    router.push("/login")
-  }
+    e.preventDefault();
+    auth.clear();
+    router.push("/login");
+  };
 
   return (
     <Sidebar>
@@ -46,9 +54,11 @@ export function AppSidebar() {
             <span className="text-sidebar-primary-foreground font-bold">D</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sidebar-foreground text-sm">CRM Dental</p>
+            <p className="font-semibold text-sidebar-foreground text-sm">
+              Intelli Dental
+            </p>
             <p className="text-xs text-sidebar-foreground/60 truncate">
-              {loading ? "Carregando..." : clinic?.name ?? "Sem clínica"}
+              {loading ? "Carregando..." : (clinic?.name ?? "Sem clínica")}
             </p>
           </div>
         </div>
@@ -77,7 +87,11 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-4">
         <div className="space-y-2">
           <Link href="/companies">
-            <Button variant="outline" size="sm" className="w-full justify-start bg-transparent">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start bg-transparent"
+            >
               <Building2 className="w-4 h-4 mr-2" />
               Trocar Empresa
             </Button>
@@ -94,5 +108,5 @@ export function AppSidebar() {
         </div>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

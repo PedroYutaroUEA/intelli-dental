@@ -1,22 +1,34 @@
-"use client"
+"use client";
 
-import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import { TopNav } from "@/components/top-nav"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { AppSidebar } from "@/components/app-sidebar";
+import { TopNav } from "@/components/top-nav";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  CreditCard,
-  Calendar,
-  Download,
-  ArrowUpRight,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import {
   ArrowDownRight,
-} from "lucide-react"
+  ArrowUpRight,
+  Calendar,
+  CreditCard,
+  DollarSign,
+  Download,
+  TrendingDown,
+  TrendingUp,
+} from "lucide-react";
 
 const mockTransactions = [
   {
@@ -69,19 +81,21 @@ const mockTransactions = [
     status: "Pago",
     description: "Clareamento Dental",
   },
-]
+];
 
 export default function FinanceiroPage() {
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <main className="flex-1 bg-gradient-to-b from-white to-secondary">
+        <main className="flex-1 bg-linear-to-b from-white to-secondary">
           <div className="border-b border-border bg-white/80 backdrop-blur-sm sticky top-0 z-10">
             <div className="flex items-center justify-between px-6 py-4">
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
-                <h1 className="text-2xl font-bold text-foreground">Informações Financeiras</h1>
+                <h1 className="text-2xl font-bold text-foreground">
+                  Informações Financeiras
+                </h1>
               </div>
               <TopNav />
             </div>
@@ -92,11 +106,15 @@ export default function FinanceiroPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Receita Total</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Receita Total
+                  </CardTitle>
                   <TrendingUp className="w-4 h-4 text-primary" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-foreground">R$ 45.280,00</div>
+                  <div className="text-2xl font-bold text-foreground">
+                    R$ 45.280,00
+                  </div>
                   <p className="text-xs text-primary flex items-center gap-1 mt-1">
                     <ArrowUpRight className="w-3 h-3" />
                     +12% em relação ao mês passado
@@ -106,11 +124,15 @@ export default function FinanceiroPage() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Despesas</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Despesas
+                  </CardTitle>
                   <TrendingDown className="w-4 h-4 text-destructive" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-foreground">R$ 12.450,00</div>
+                  <div className="text-2xl font-bold text-foreground">
+                    R$ 12.450,00
+                  </div>
                   <p className="text-xs text-destructive flex items-center gap-1 mt-1">
                     <ArrowDownRight className="w-3 h-3" />
                     +5% em relação ao mês passado
@@ -120,23 +142,35 @@ export default function FinanceiroPage() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Lucro Líquido</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Lucro Líquido
+                  </CardTitle>
                   <DollarSign className="w-4 h-4 text-accent" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-foreground">R$ 32.830,00</div>
-                  <p className="text-xs text-muted-foreground mt-1">Margem de 72,5%</p>
+                  <div className="text-2xl font-bold text-foreground">
+                    R$ 32.830,00
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Margem de 72,5%
+                  </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Pendente</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Pendente
+                  </CardTitle>
                   <CreditCard className="w-4 h-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-foreground">R$ 8.500,00</div>
-                  <p className="text-xs text-muted-foreground mt-1">12 pagamentos pendentes</p>
+                  <div className="text-2xl font-bold text-foreground">
+                    R$ 8.500,00
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    12 pagamentos pendentes
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -145,7 +179,7 @@ export default function FinanceiroPage() {
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div className="flex gap-2">
                 <Select defaultValue="mes">
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-45">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -157,7 +191,7 @@ export default function FinanceiroPage() {
                   </SelectContent>
                 </Select>
                 <Select defaultValue="todos">
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-45">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -177,7 +211,9 @@ export default function FinanceiroPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Transações Recentes</CardTitle>
-                <CardDescription>Histórico de receitas e despesas</CardDescription>
+                <CardDescription>
+                  Histórico de receitas e despesas
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -189,7 +225,9 @@ export default function FinanceiroPage() {
                       <div className="flex items-center gap-4 flex-1">
                         <div
                           className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            transaction.type === "Receita" ? "bg-primary/10" : "bg-destructive/10"
+                            transaction.type === "Receita"
+                              ? "bg-primary/10"
+                              : "bg-destructive/10"
                           }`}
                         >
                           {transaction.type === "Receita" ? (
@@ -199,21 +237,31 @@ export default function FinanceiroPage() {
                           )}
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-foreground">{transaction.patient}</p>
-                          <p className="text-sm text-muted-foreground">{transaction.description}</p>
+                          <p className="font-medium text-foreground">
+                            {transaction.patient}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {transaction.description}
+                          </p>
                           <div className="flex items-center gap-2 mt-1">
                             <Calendar className="w-3 h-3 text-muted-foreground" />
                             <span className="text-xs text-muted-foreground">
-                              {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                              {new Date(transaction.date).toLocaleDateString(
+                                "pt-BR",
+                              )}
                             </span>
-                            <span className="text-xs text-muted-foreground">• {transaction.method}</span>
+                            <span className="text-xs text-muted-foreground">
+                              • {transaction.method}
+                            </span>
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
                         <p
                           className={`font-semibold ${
-                            transaction.type === "Receita" ? "text-primary" : "text-destructive"
+                            transaction.type === "Receita"
+                              ? "text-primary"
+                              : "text-destructive"
                           }`}
                         >
                           {transaction.type === "Receita" ? "+" : "-"}R${" "}
@@ -221,7 +269,14 @@ export default function FinanceiroPage() {
                             minimumFractionDigits: 2,
                           })}
                         </p>
-                        <Badge variant={transaction.status === "Pago" ? "default" : "secondary"} className="mt-1">
+                        <Badge
+                          variant={
+                            transaction.status === "Pago"
+                              ? "default"
+                              : "secondary"
+                          }
+                          className="mt-1"
+                        >
                           {transaction.status}
                         </Badge>
                       </div>
@@ -234,5 +289,5 @@ export default function FinanceiroPage() {
         </main>
       </div>
     </SidebarProvider>
-  )
+  );
 }

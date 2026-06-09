@@ -1,4 +1,4 @@
-# Dental-CRM RAG pipeline
+# Intelli Dental RAG pipeline
 
 A minimal Retrieval-Augmented Generation service for querying patient data with
 **Ollama + LLaMA 3** and **ChromaDB**. Everything runs in Docker; one
@@ -6,15 +6,15 @@ A minimal Retrieval-Augmented Generation service for querying patient data with
 
 ## Components
 
-| Stage | Implementation |
-|---|---|
-| Document ingestion | PDF (`pdf-parse`), TXT/MD (fs), HTML (`cheerio`), JSON records (one record = one chunk) |
-| Chunking | `RecursiveCharacterTextSplitter` — **500 chars / 75 overlap (~15%)** for prose; **1 chunk per record** for structured JSON |
-| Embeddings | `nomic-embed-text` via Ollama `/api/embeddings` |
-| Vector DB | ChromaDB (server) with cosine distance, metadata filter on `patientId` |
-| Retrieval | top-k semantic search (k=8 default) |
-| Re-ranking (optional) | `Xenova/bge-reranker-base` cross-encoder via `@xenova/transformers` |
-| Generation | `phi3:mini` via Ollama `/api/chat`, streamed |
+| Stage                 | Implementation                                                                                                             |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Document ingestion    | PDF (`pdf-parse`), TXT/MD (fs), HTML (`cheerio`), JSON records (one record = one chunk)                                    |
+| Chunking              | `RecursiveCharacterTextSplitter` — **500 chars / 75 overlap (~15%)** for prose; **1 chunk per record** for structured JSON |
+| Embeddings            | `nomic-embed-text` via Ollama `/api/embeddings`                                                                            |
+| Vector DB             | ChromaDB (server) with cosine distance, metadata filter on `patientId`                                                     |
+| Retrieval             | top-k semantic search (k=8 default)                                                                                        |
+| Re-ranking (optional) | `Xenova/bge-reranker-base` cross-encoder via `@xenova/transformers`                                                        |
+| Generation            | `phi3:mini` via Ollama `/api/chat`, streamed                                                                               |
 
 ### Why these chunk sizes?
 
@@ -72,38 +72,45 @@ docker compose exec rag-app pnpm chat --patient 001
 ## REST API
 
 ### `POST /ingest`
+
 ```json
 { "patientId": "001", "dir": "data/sample/patient-001" }
 ```
+
 Either `dir` or `file` is required. Path is resolved inside the container
 (`./data` on the host is mounted to `/app/data`).
 
 ### `POST /chat` — streams SSE
+
 ```json
 { "patientId": "001", "question": "...", "k": 8, "rerank": false }
 ```
+
 Events:
+
 - `event: sources` — JSON array of `{source, index, distance}`
 - `data: "<token>"` — repeated; one per generated piece
 - `event: done` — terminal
 
 ### `GET /health`
+
 Returns connection info.
 
 ## Configuration
 
 Environment variables (defaults shown in [`.env.example`](.env.example)):
 
-| Var | Default | Purpose |
-|---|---|---|
-| `OLLAMA_URL` | `http://ollama:11434` | Ollama host |
-| `CHROMA_URL` | `http://chroma:8000` | Chroma host |
-| `LLM_MODEL` | `phi3:mini` | Generation model |
-| `EMBED_MODEL` | `nomic-embed-text` | Embedding model |
-| `TOP_K` | `8` | Default `nResults` |
-| `RERANK` | `false` | Enable cross-encoder re-rank |
+| Var           | Default               | Purpose                      |
+| ------------- | --------------------- | ---------------------------- |
+| `OLLAMA_URL`  | `http://ollama:11434` | Ollama host                  |
+| `CHROMA_URL`  | `http://chroma:8000`  | Chroma host                  |
+| `LLM_MODEL`   | `phi3:mini`           | Generation model             |
+| `EMBED_MODEL` | `nomic-embed-text`    | Embedding model              |
+| `TOP_K`       | `8`                   | Default `nResults`           |
+| `RERANK`      | `false`               | Enable cross-encoder re-rank |
 
 To use a different model, set it in your shell before `docker compose up`:
+
 ```bash
 LLM_MODEL=llama3.2:3b docker compose up -d
 ```

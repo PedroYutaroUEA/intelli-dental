@@ -7,7 +7,7 @@ app/.next/
 app/out/
 
 # TypeScript build output
-rag-pipeline/dist/
+**/dist/
 
 # Environment variables
 **/.env

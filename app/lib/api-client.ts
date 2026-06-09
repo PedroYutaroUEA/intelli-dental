@@ -1,5 +1,5 @@
 /**
- * Thin typed client for the Dental-CRM API.
+ * Thin typed client for the Intelli Dental API.
  *
  * - JWT is read from localStorage (`dental.token`).
  * - The active clinic is read from localStorage (`dental.clinicId`) and sent
@@ -10,75 +10,75 @@
  * call is proxied through the API.
  */
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"
-const VERSION = "v1"
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+const VERSION = "v1";
 
-const TOKEN_KEY = "dental.token"
-const CLINIC_KEY = "dental.clinicId"
+const TOKEN_KEY = "dental.token";
+const CLINIC_KEY = "dental.clinicId";
 
 function getToken(): string | null {
-  if (typeof window === "undefined") return null
-  return window.localStorage.getItem(TOKEN_KEY)
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(TOKEN_KEY);
 }
 
 function getClinicId(): string | null {
-  if (typeof window === "undefined") return null
-  return window.localStorage.getItem(CLINIC_KEY)
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(CLINIC_KEY);
 }
 
 export const auth = {
   setToken(token: string) {
-    window.localStorage.setItem(TOKEN_KEY, token)
+    window.localStorage.setItem(TOKEN_KEY, token);
   },
   setClinicId(id: string) {
-    window.localStorage.setItem(CLINIC_KEY, id)
+    window.localStorage.setItem(CLINIC_KEY, id);
   },
   getClinicId,
   getToken,
   clear() {
-    window.localStorage.removeItem(TOKEN_KEY)
-    window.localStorage.removeItem(CLINIC_KEY)
+    window.localStorage.removeItem(TOKEN_KEY);
+    window.localStorage.removeItem(CLINIC_KEY);
   },
   isLoggedIn() {
-    return !!getToken()
+    return !!getToken();
   },
-}
+};
 
 export interface ApiError extends Error {
-  status: number
-  body: unknown
+  status: number;
+  body: unknown;
 }
 
 // ─── pending-request tracker ────────────────────────────────────────────
 // Lets UI render a global spinner / progress bar whenever any API call is
 // in flight. Components subscribe via `subscribeApiLoading`.
-let pendingCount = 0
-const loadingListeners = new Set<(count: number) => void>()
+let pendingCount = 0;
+const loadingListeners = new Set<(count: number) => void>();
 
 function notifyLoading() {
-  for (const l of loadingListeners) l(pendingCount)
+  for (const l of loadingListeners) l(pendingCount);
 }
 
 function startRequest() {
-  pendingCount += 1
-  notifyLoading()
+  pendingCount += 1;
+  notifyLoading();
 }
 
 function endRequest() {
-  pendingCount = Math.max(0, pendingCount - 1)
-  notifyLoading()
+  pendingCount = Math.max(0, pendingCount - 1);
+  notifyLoading();
 }
 
 export function subscribeApiLoading(cb: (count: number) => void): () => void {
-  loadingListeners.add(cb)
-  cb(pendingCount)
+  loadingListeners.add(cb);
+  cb(pendingCount);
   return () => {
-    loadingListeners.delete(cb)
-  }
+    loadingListeners.delete(cb);
+  };
 }
 
 export function getApiPendingCount(): number {
-  return pendingCount
+  return pendingCount;
 }
 
 function buildHeaders(
@@ -86,307 +86,312 @@ function buildHeaders(
   withClinic = true,
   withJsonContentType = true,
 ): HeadersInit {
-  const headers: Record<string, string> = { ...extra }
-  if (withJsonContentType) headers["content-type"] = "application/json"
-  const token = getToken()
-  if (token) headers["authorization"] = `Bearer ${token}`
+  const headers: Record<string, string> = { ...extra };
+  if (withJsonContentType) headers["content-type"] = "application/json";
+  const token = getToken();
+  if (token) headers["authorization"] = `Bearer ${token}`;
   if (withClinic) {
-    const clinicId = getClinicId()
-    if (clinicId) headers["x-clinic-id"] = clinicId
+    const clinicId = getClinicId();
+    if (clinicId) headers["x-clinic-id"] = clinicId;
   }
-  return headers
+  return headers;
 }
 
 function extractMessage(body: unknown, fallback: string): string {
   if (typeof body === "object" && body && "message" in body) {
-    const m = (body as { message: unknown }).message
-    if (Array.isArray(m)) return (m as string[]).join(", ")
-    return String(m)
+    const m = (body as { message: unknown }).message;
+    if (Array.isArray(m)) return (m as string[]).join(", ");
+    return String(m);
   }
-  return fallback
+  return fallback;
 }
 
 async function request<T>(
   path: string,
   init: RequestInit & { withClinic?: boolean } = {},
 ): Promise<T> {
-  const { withClinic = true, headers, ...rest } = init
-  startRequest()
+  const { withClinic = true, headers, ...rest } = init;
+  startRequest();
   try {
     const res = await fetch(`${BASE}/${VERSION}${path}`, {
       ...rest,
       headers: buildHeaders(headers as Record<string, string>, withClinic),
-    })
+    });
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
+      const body = await res.json().catch(() => ({}));
       const err = new Error(
         extractMessage(body, `Request failed with ${res.status}`),
-      ) as ApiError
-      err.status = res.status
-      err.body = body
-      throw err
+      ) as ApiError;
+      err.status = res.status;
+      err.body = body;
+      throw err;
     }
-    if (res.status === 204) return undefined as T
-    return (await res.json()) as T
+    if (res.status === 204) return undefined as T;
+    return (await res.json()) as T;
   } finally {
-    endRequest()
+    endRequest();
   }
 }
 
 // ----- Auth -----
 export interface LoggedUser {
-  id: string
-  email: string
-  fullName: string
-  cro?: string | null
-  phone?: string | null
+  id: string;
+  email: string;
+  fullName: string;
+  cro?: string | null;
+  phone?: string | null;
 }
 
 export interface ClinicSummary {
-  id: string
-  name: string
-  cnpj?: string | null
-  address?: string | null
-  phone?: string | null
+  id: string;
+  name: string;
+  cnpj?: string | null;
+  address?: string | null;
+  phone?: string | null;
 }
 
 export const authApi = {
   signup(payload: {
-    email: string
-    password: string
-    fullName: string
-    clinicName: string
-    cro?: string
-    phone?: string
+    email: string;
+    password: string;
+    fullName: string;
+    clinicName: string;
+    cro?: string;
+    phone?: string;
   }) {
     return request<{ token: string; user: LoggedUser; clinic: ClinicSummary }>(
       "/auth/signup",
       { method: "POST", body: JSON.stringify(payload), withClinic: false },
-    )
+    );
   },
   login(email: string, password: string) {
     return request<{ token: string; user: LoggedUser }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
       withClinic: false,
-    })
+    });
   },
   me() {
-    return request<LoggedUser>("/auth/me", { withClinic: false })
+    return request<LoggedUser>("/auth/me", { withClinic: false });
   },
-}
+};
 
 // ----- Clinics -----
-export type ClinicRole = "owner" | "dentist" | "assistant" | "receptionist"
+export type ClinicRole = "owner" | "dentist" | "assistant" | "receptionist";
 
 export interface ClinicMembership extends ClinicSummary {
-  role: ClinicRole
-  isActive: boolean
-  pending: boolean
+  role: ClinicRole;
+  isActive: boolean;
+  pending: boolean;
 }
 
 export interface ClinicMember {
-  membershipId: string
-  role: ClinicRole
-  isActive: boolean
-  acceptedAt: string | null
-  invitedAt: string | null
-  userId: string
-  email: string
-  fullName: string
-  cro?: string | null
+  membershipId: string;
+  role: ClinicRole;
+  isActive: boolean;
+  acceptedAt: string | null;
+  invitedAt: string | null;
+  userId: string;
+  email: string;
+  fullName: string;
+  cro?: string | null;
 }
 
 export interface DentistSummary {
-  userId: string
-  fullName: string
-  cro?: string | null
+  userId: string;
+  fullName: string;
+  cro?: string | null;
 }
 
 export interface PendingInvitation {
-  id: string
-  clinicId: string
-  clinicName: string
-  role: ClinicRole
-  invitedAt: string | null
+  id: string;
+  clinicId: string;
+  clinicName: string;
+  role: ClinicRole;
+  invitedAt: string | null;
 }
 
 export const clinicsApi = {
   list() {
-    return request<ClinicMembership[]>("/clinics", { withClinic: false })
+    return request<ClinicMembership[]>("/clinics", { withClinic: false });
   },
-  create(payload: { name: string; cnpj?: string; address?: string; phone?: string }) {
+  create(payload: {
+    name: string;
+    cnpj?: string;
+    address?: string;
+    phone?: string;
+  }) {
     return request<ClinicSummary>("/clinics", {
       method: "POST",
       body: JSON.stringify(payload),
       withClinic: false,
-    })
+    });
   },
   members() {
-    return request<ClinicMember[]>("/clinics/current/members")
+    return request<ClinicMember[]>("/clinics/current/members");
   },
   listDentists() {
-    return request<DentistSummary[]>("/clinics/current/dentists")
+    return request<DentistSummary[]>("/clinics/current/dentists");
   },
   inviteMember(payload: { email: string; role: ClinicRole }) {
     return request<unknown>("/clinics/current/members/invite", {
       method: "POST",
       body: JSON.stringify(payload),
-    })
+    });
   },
   listInvitations() {
-    return request<PendingInvitation[]>("/invitations", { withClinic: false })
+    return request<PendingInvitation[]>("/invitations", { withClinic: false });
   },
   acceptInvitation(id: string) {
     return request<unknown>(`/invitations/${id}/accept`, {
       method: "POST",
       withClinic: false,
-    })
+    });
   },
   declineInvitation(id: string) {
     return request<unknown>(`/invitations/${id}/decline`, {
       method: "POST",
       withClinic: false,
-    })
+    });
   },
-}
+};
 
 // ----- Patients -----
 export interface PatientSummary {
-  id: string
-  clinicId: string
-  fullName: string
-  birthDate?: string | null
-  gender?: string | null
-  cpf?: string | null
-  email?: string | null
-  phone?: string | null
-  address?: string | null
-  notes?: string | null
-  specialties: string[]
-  createdAt: string
-  updatedAt: string
+  id: string;
+  clinicId: string;
+  fullName: string;
+  birthDate?: string | null;
+  gender?: string | null;
+  cpf?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  specialties: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreatePatientPayload {
-  fullName: string
-  birthDate?: string
-  gender?: string
-  cpf?: string
-  email?: string
-  phone?: string
-  address?: string
-  notes?: string
-  specialties?: string[]
+  fullName: string;
+  birthDate?: string;
+  gender?: string;
+  cpf?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+  specialties?: string[];
 }
 
-export type UpdatePatientPayload = Partial<CreatePatientPayload>
+export type UpdatePatientPayload = Partial<CreatePatientPayload>;
 
 export type TimelineEntry =
   | { type: "appointment"; at: string; data: AppointmentRecord }
   | { type: "anamnesis"; at: string; data: AnamnesisRecord }
-  | { type: "document"; at: string; data: PatientDocument }
+  | { type: "document"; at: string; data: PatientDocument };
 
 export const patientsApi = {
   list(params?: { search?: string; specialty?: string }) {
-    const q = new URLSearchParams()
-    if (params?.search) q.set("search", params.search)
-    if (params?.specialty) q.set("specialty", params.specialty)
-    const suffix = q.toString() ? `?${q.toString()}` : ""
-    return request<PatientSummary[]>(`/patients${suffix}`)
+    const q = new URLSearchParams();
+    if (params?.search) q.set("search", params.search);
+    if (params?.specialty) q.set("specialty", params.specialty);
+    const suffix = q.toString() ? `?${q.toString()}` : "";
+    return request<PatientSummary[]>(`/patients${suffix}`);
   },
   get(id: string) {
-    return request<PatientSummary>(`/patients/${id}`)
+    return request<PatientSummary>(`/patients/${id}`);
   },
   create(payload: CreatePatientPayload) {
     return request<PatientSummary>("/patients", {
       method: "POST",
       body: JSON.stringify(payload),
-    })
+    });
   },
   update(id: string, payload: UpdatePatientPayload) {
     return request<PatientSummary>(`/patients/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
-    })
+    });
   },
   remove(id: string) {
     return request<{ id: string; deleted: boolean }>(`/patients/${id}`, {
       method: "DELETE",
-    })
+    });
   },
   timeline(id: string) {
-    return request<TimelineEntry[]>(`/patients/${id}/timeline`)
+    return request<TimelineEntry[]>(`/patients/${id}/timeline`);
   },
-}
+};
 
 // ----- Anamneses -----
 export interface AnamnesisRecord {
-  id: string
-  clinicId: string
-  patientId: string
-  recordedBy: string
-  recordedAt: string
-  specialties: string[]
-  chiefComplaint?: string | null
-  presentIllnessHistory?: string | null
-  allergiesSummary?: string | null
-  medicationsSummary?: string | null
-  underMedicalTreatment: boolean
-  pregnant?: boolean | null
-  gestationalWeeks?: number | null
-  lactating?: boolean | null
-  smoker: boolean
-  alcoholUse?: string | null
-  bruxism: boolean
-  lastDentalVisit?: string | null
-  answers: Record<string, unknown>
-  consentSigned: boolean
-  consentSignedAt?: string | null
-  signatureUrl?: string | null
-  schemaVersion: number
-  createdAt: string
+  id: string;
+  clinicId: string;
+  patientId: string;
+  recordedBy: string;
+  recordedAt: string;
+  specialties: string[];
+  chiefComplaint?: string | null;
+  presentIllnessHistory?: string | null;
+  allergiesSummary?: string | null;
+  medicationsSummary?: string | null;
+  underMedicalTreatment: boolean;
+  pregnant?: boolean | null;
+  gestationalWeeks?: number | null;
+  lactating?: boolean | null;
+  smoker: boolean;
+  alcoholUse?: string | null;
+  bruxism: boolean;
+  lastDentalVisit?: string | null;
+  answers: Record<string, unknown>;
+  consentSigned: boolean;
+  consentSignedAt?: string | null;
+  signatureUrl?: string | null;
+  schemaVersion: number;
+  createdAt: string;
 }
 
 export interface CreateAnamnesisPayload {
-  specialties: string[]
-  chiefComplaint?: string
-  presentIllnessHistory?: string
-  allergiesSummary?: string
-  medicationsSummary?: string
-  underMedicalTreatment?: boolean
-  pregnant?: boolean
-  gestationalWeeks?: number
-  lactating?: boolean
-  smoker?: boolean
-  alcoholUse?: string
-  bruxism?: boolean
-  lastDentalVisit?: string
-  answers: Record<string, unknown>
-  consentSigned: boolean
-  signatureUrl?: string
+  specialties: string[];
+  chiefComplaint?: string;
+  presentIllnessHistory?: string;
+  allergiesSummary?: string;
+  medicationsSummary?: string;
+  underMedicalTreatment?: boolean;
+  pregnant?: boolean;
+  gestationalWeeks?: number;
+  lactating?: boolean;
+  smoker?: boolean;
+  alcoholUse?: string;
+  bruxism?: boolean;
+  lastDentalVisit?: string;
+  answers: Record<string, unknown>;
+  consentSigned: boolean;
+  signatureUrl?: string;
 }
 
 export const anamnesesApi = {
   listByPatient(patientId: string) {
-    return request<AnamnesisRecord[]>(`/patients/${patientId}/anamneses`)
+    return request<AnamnesisRecord[]>(`/patients/${patientId}/anamneses`);
   },
   create(patientId: string, payload: CreateAnamnesisPayload) {
     return request<AnamnesisRecord>(`/patients/${patientId}/anamneses`, {
       method: "POST",
       body: JSON.stringify(payload),
-    })
+    });
   },
   update(id: string, payload: Partial<CreateAnamnesisPayload>) {
     return request<AnamnesisRecord>(`/anamneses/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
-    })
+    });
   },
   get(id: string) {
-    return request<AnamnesisRecord>(`/anamneses/${id}`)
+    return request<AnamnesisRecord>(`/anamneses/${id}`);
   },
-}
+};
 
 // ----- Appointments -----
 export type AppointmentStatus =
@@ -395,124 +400,124 @@ export type AppointmentStatus =
   | "confirmed"
   | "completed"
   | "cancelled"
-  | "no_show"
+  | "no_show";
 
 export interface AppointmentRecord {
-  id: string
-  clinicId: string
-  patientId: string
-  dentistId: string
-  createdBy: string
-  startsAt: string
-  endsAt: string
-  status: AppointmentStatus
-  reason?: string | null
-  notes?: string | null
-  createdAt: string
-  updatedAt: string
+  id: string;
+  clinicId: string;
+  patientId: string;
+  dentistId: string;
+  createdBy: string;
+  startsAt: string;
+  endsAt: string;
+  status: AppointmentStatus;
+  reason?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateAppointmentPayload {
-  patientId: string
-  dentistId: string
-  startsAt: string
-  endsAt: string
-  reason?: string
-  notes?: string
+  patientId: string;
+  dentistId: string;
+  startsAt: string;
+  endsAt: string;
+  reason?: string;
+  notes?: string;
 }
 
 export type UpdateAppointmentPayload = Partial<
   Omit<CreateAppointmentPayload, "patientId">
-> & { status?: AppointmentStatus }
+> & { status?: AppointmentStatus };
 
 export const appointmentsApi = {
   list(params?: { from?: string; to?: string; dentistId?: string }) {
-    const q = new URLSearchParams()
-    if (params?.from) q.set("from", params.from)
-    if (params?.to) q.set("to", params.to)
-    if (params?.dentistId) q.set("dentistId", params.dentistId)
-    const suffix = q.toString() ? `?${q.toString()}` : ""
-    return request<AppointmentRecord[]>(`/appointments${suffix}`)
+    const q = new URLSearchParams();
+    if (params?.from) q.set("from", params.from);
+    if (params?.to) q.set("to", params.to);
+    if (params?.dentistId) q.set("dentistId", params.dentistId);
+    const suffix = q.toString() ? `?${q.toString()}` : "";
+    return request<AppointmentRecord[]>(`/appointments${suffix}`);
   },
   listMine(params?: { from?: string; to?: string }) {
-    const q = new URLSearchParams()
-    if (params?.from) q.set("from", params.from)
-    if (params?.to) q.set("to", params.to)
-    const suffix = q.toString() ? `?${q.toString()}` : ""
+    const q = new URLSearchParams();
+    if (params?.from) q.set("from", params.from);
+    if (params?.to) q.set("to", params.to);
+    const suffix = q.toString() ? `?${q.toString()}` : "";
     return request<AppointmentRecord[]>(`/me/appointments${suffix}`, {
       withClinic: false,
-    })
+    });
   },
   get(id: string) {
-    return request<AppointmentRecord>(`/appointments/${id}`)
+    return request<AppointmentRecord>(`/appointments/${id}`);
   },
   listForPatient(
     patientId: string,
     params?: { upcoming?: boolean; limit?: number; from?: string; to?: string },
   ) {
-    const q = new URLSearchParams()
-    if (params?.upcoming) q.set("upcoming", "true")
-    if (params?.limit) q.set("limit", String(params.limit))
-    if (params?.from) q.set("from", params.from)
-    if (params?.to) q.set("to", params.to)
-    const suffix = q.toString() ? `?${q.toString()}` : ""
+    const q = new URLSearchParams();
+    if (params?.upcoming) q.set("upcoming", "true");
+    if (params?.limit) q.set("limit", String(params.limit));
+    if (params?.from) q.set("from", params.from);
+    if (params?.to) q.set("to", params.to);
+    const suffix = q.toString() ? `?${q.toString()}` : "";
     return request<AppointmentRecord[]>(
       `/patients/${patientId}/appointments${suffix}`,
-    )
+    );
   },
   create(payload: CreateAppointmentPayload) {
     return request<AppointmentRecord>("/appointments", {
       method: "POST",
       body: JSON.stringify(payload),
-    })
+    });
   },
   update(id: string, payload: UpdateAppointmentPayload) {
     return request<AppointmentRecord>(`/appointments/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
-    })
+    });
   },
   cancel(id: string, reason?: string) {
     return request<AppointmentRecord>(`/appointments/${id}`, {
       method: "DELETE",
       body: JSON.stringify({ reason }),
-    })
+    });
   },
   approve(id: string) {
     return request<AppointmentRecord>(`/appointments/${id}/approve`, {
       method: "POST",
       body: JSON.stringify({}),
-    })
+    });
   },
   reject(id: string, reason?: string) {
     return request<AppointmentRecord>(`/appointments/${id}/reject`, {
       method: "POST",
       body: JSON.stringify({ reason }),
-    })
+    });
   },
-}
+};
 
 // ----- Booking tokens (patient self-booking) -----
 export interface BookingTokenIssued {
-  id: string
-  token: string
-  url: string
-  expiresAt: string
+  id: string;
+  token: string;
+  url: string;
+  expiresAt: string;
 }
 
 export interface BookingPublicPayload {
-  clinic: { id: string; name: string }
-  patient: { id: string; fullName: string }
-  dentists: { id: string; fullName: string; cro?: string | null }[]
-  busySlots: { dentistId: string; startsAt: string; endsAt: string }[]
-  expiresAt: string
+  clinic: { id: string; name: string };
+  patient: { id: string; fullName: string };
+  dentists: { id: string; fullName: string; cro?: string | null }[];
+  busySlots: { dentistId: string; startsAt: string; endsAt: string }[];
+  expiresAt: string;
 }
 
 export interface BookingSubmitPayload {
-  dentistId: string
-  startsAt: string
-  durationMinutes: number
-  reason?: string
+  dentistId: string;
+  startsAt: string;
+  durationMinutes: number;
+  reason?: string;
 }
 
 export const bookingApi = {
@@ -527,12 +532,12 @@ export const bookingApi = {
         method: "POST",
         body: JSON.stringify(payload ?? {}),
       },
-    )
+    );
   },
   getPublic(token: string) {
     return request<BookingPublicPayload>(`/public/booking/${token}`, {
       withClinic: false,
-    })
+    });
   },
   submit(token: string, payload: BookingSubmitPayload) {
     return request<{ ok: boolean; appointment: AppointmentRecord }>(
@@ -542,38 +547,38 @@ export const bookingApi = {
         body: JSON.stringify(payload),
         withClinic: false,
       },
-    )
+    );
   },
-}
+};
 
 // ----- Documents -----
-export type IngestStatus = "pending" | "processing" | "ready" | "failed"
+export type IngestStatus = "pending" | "processing" | "ready" | "failed";
 
 export interface PatientDocument {
-  id: string
-  clinicId: string
-  patientId: string
-  uploadedBy: string
-  filename: string
-  mimeType: string
-  sizeBytes: number
-  storageUrl: string
-  ingestStatus: IngestStatus
-  ingestError?: string | null
-  chunkCount?: number | null
-  ingestedAt?: string | null
-  createdAt: string
-  updatedAt: string
+  id: string;
+  clinicId: string;
+  patientId: string;
+  uploadedBy: string;
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+  storageUrl: string;
+  ingestStatus: IngestStatus;
+  ingestError?: string | null;
+  chunkCount?: number | null;
+  ingestedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const documentsApi = {
   list(patientId: string) {
-    return request<PatientDocument[]>(`/patients/${patientId}/documents`)
+    return request<PatientDocument[]>(`/patients/${patientId}/documents`);
   },
   async upload(patientId: string, files: File[]): Promise<PatientDocument[]> {
-    const fd = new FormData()
-    for (const f of files) fd.append("files", f, f.name)
-    startRequest()
+    const fd = new FormData();
+    for (const f of files) fd.append("files", f, f.name);
+    startRequest();
     try {
       const res = await fetch(
         `${BASE}/${VERSION}/patients/${patientId}/documents`,
@@ -583,76 +588,73 @@ export const documentsApi = {
           headers: buildHeaders(undefined, true, false),
           body: fd,
         },
-      )
+      );
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
+        const body = await res.json().catch(() => ({}));
         const err = new Error(
           extractMessage(body, `Upload failed with ${res.status}`),
-        ) as ApiError
-        err.status = res.status
-        err.body = body
-        throw err
+        ) as ApiError;
+        err.status = res.status;
+        err.body = body;
+        throw err;
       }
-      return (await res.json()) as PatientDocument[]
+      return (await res.json()) as PatientDocument[];
     } finally {
-      endRequest()
+      endRequest();
     }
   },
   remove(patientId: string, documentId: string) {
     return request<{ id: string; deleted: boolean }>(
       `/patients/${patientId}/documents/${documentId}`,
       { method: "DELETE" },
-    )
+    );
   },
-}
+};
 
 // ----- Chat -----
 export interface ChatSession {
-  id: string
-  patientId: string
-  createdAt: string
+  id: string;
+  patientId: string;
+  createdAt: string;
 }
 
 export interface ChatMessage {
-  id: string
-  sessionId: string
-  role: "user" | "assistant"
-  content: string
-  sources?: unknown
-  contextRelevance?: number | null
-  groundedness?: number | null
-  answerRelevance?: number | null
-  metricsPerChunk?: number[] | null
-  createdAt: string
+  id: string;
+  sessionId: string;
+  role: "user" | "assistant";
+  content: string;
+  sources?: unknown;
+  contextRelevance?: number | null;
+  groundedness?: number | null;
+  answerRelevance?: number | null;
+  metricsPerChunk?: number[] | null;
+  createdAt: string;
 }
 
 export const chatApi = {
   health() {
-    return request<{ ok: boolean }>("/chat/health")
+    return request<{ ok: boolean }>("/chat/health");
   },
   createSession(patientId: string) {
     return request<ChatSession>("/chat/sessions", {
       method: "POST",
       body: JSON.stringify({ patientId }),
-    })
+    });
   },
   listSessions(patientId?: string) {
-    const suffix = patientId ? `?patientId=${patientId}` : ""
-    return request<ChatSession[]>(`/chat/sessions${suffix}`)
+    const suffix = patientId ? `?patientId=${patientId}` : "";
+    return request<ChatSession[]>(`/chat/sessions${suffix}`);
   },
   listMessages(sessionId: string) {
-    return request<ChatMessage[]>(`/chat/sessions/${sessionId}/messages`)
+    return request<ChatMessage[]>(`/chat/sessions/${sessionId}/messages`);
   },
   runAction(sessionId: string, payload: ChatActionPayload) {
-    return request<ChatActionResult>(
-      `/chat/sessions/${sessionId}/actions`,
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-      },
-    )
+    return request<ChatActionResult>(`/chat/sessions/${sessionId}/actions`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
-}
+};
 
 export type ChatActionKind =
   | "list_upcoming"
@@ -660,51 +662,51 @@ export type ChatActionKind =
   | "reschedule"
   | "cancel"
   | "approve"
-  | "reject"
+  | "reject";
 
 export interface ChatActionArgs {
-  appointmentId?: string
-  dentistId?: string
-  startsAt?: string
-  durationMinutes?: number
-  reason?: string
-  limit?: number
+  appointmentId?: string;
+  dentistId?: string;
+  startsAt?: string;
+  durationMinutes?: number;
+  reason?: string;
+  limit?: number;
 }
 
 export interface ChatActionPayload {
-  kind: ChatActionKind
-  mode: "preview" | "commit"
-  args?: ChatActionArgs
+  kind: ChatActionKind;
+  mode: "preview" | "commit";
+  args?: ChatActionArgs;
 }
 
 export interface ChatActionResult {
-  ok: true
-  kind: ChatActionKind
-  mode: "preview" | "commit"
-  message: string
-  data?: unknown
+  ok: true;
+  kind: ChatActionKind;
+  mode: "preview" | "commit";
+  message: string;
+  data?: unknown;
 }
 
 export interface SourceRef {
-  source: string
-  index?: number
-  distance?: number
-  relevance?: number
+  source: string;
+  index?: number;
+  distance?: number;
+  relevance?: number;
 }
 
 export interface RagMetrics {
-  contextRelevance: number | null
-  groundedness: number | null
-  answerRelevance: number | null
-  perChunk: number[]
+  contextRelevance: number | null;
+  groundedness: number | null;
+  answerRelevance: number | null;
+  perChunk: number[];
 }
 
 export interface StreamHandlers {
-  onSources?: (sources: SourceRef[]) => void
-  onToken?: (token: string) => void
-  onMetrics?: (metrics: RagMetrics) => void
-  onDone?: () => void
-  onError?: (message: string) => void
+  onSources?: (sources: SourceRef[]) => void;
+  onToken?: (token: string) => void;
+  onMetrics?: (metrics: RagMetrics) => void;
+  onDone?: () => void;
+  onError?: (message: string) => void;
 }
 
 /**
@@ -719,9 +721,9 @@ export function streamChat(
   question: string,
   handlers: StreamHandlers,
 ): AbortController {
-  const controller = new AbortController()
+  const controller = new AbortController();
 
-  ;(async () => {
+  (async () => {
     try {
       const res = await fetch(
         `${BASE}/${VERSION}/chat/sessions/${sessionId}/messages`,
@@ -731,82 +733,83 @@ export function streamChat(
           body: JSON.stringify({ question }),
           signal: controller.signal,
         },
-      )
+      );
       if (!res.ok || !res.body) {
-        const text = await res.text().catch(() => "")
-        handlers.onError?.(`HTTP ${res.status}: ${text}`)
-        return
+        const text = await res.text().catch(() => "");
+        handlers.onError?.(`HTTP ${res.status}: ${text}`);
+        return;
       }
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ""
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
       while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        let idx: number
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
         while ((idx = buffer.indexOf("\n\n")) !== -1) {
-          const evt = buffer.slice(0, idx)
-          buffer = buffer.slice(idx + 2)
-          handleEvent(evt, handlers)
+          const evt = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          handleEvent(evt, handlers);
         }
       }
-      handlers.onDone?.()
+      handlers.onDone?.();
     } catch (err) {
-      if ((err as Error).name === "AbortError") return
-      handlers.onError?.((err as Error).message)
+      if ((err as Error).name === "AbortError") return;
+      handlers.onError?.((err as Error).message);
     }
-  })()
+  })();
 
-  return controller
+  return controller;
 }
 
 function handleEvent(raw: string, handlers: StreamHandlers) {
-  const lines = raw.split("\n")
-  let event: string | undefined
-  const dataLines: string[] = []
+  const lines = raw.split("\n");
+  let event: string | undefined;
+  const dataLines: string[] = [];
   for (const line of lines) {
-    if (line.startsWith("event:")) event = line.slice(6).trim()
-    else if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart())
+    if (line.startsWith("event:")) event = line.slice(6).trim();
+    else if (line.startsWith("data:"))
+      dataLines.push(line.slice(5).trimStart());
   }
-  if (dataLines.length === 0) return
-  const data = dataLines.join("\n")
+  if (dataLines.length === 0) return;
+  const data = dataLines.join("\n");
 
   if (event === "sources") {
     try {
-      handlers.onSources?.(JSON.parse(data) as SourceRef[])
+      handlers.onSources?.(JSON.parse(data) as SourceRef[]);
     } catch {
       /* ignore */
     }
-    return
+    return;
   }
   if (event === "metrics") {
     try {
-      handlers.onMetrics?.(JSON.parse(data) as RagMetrics)
+      handlers.onMetrics?.(JSON.parse(data) as RagMetrics);
     } catch {
       /* ignore */
     }
-    return
+    return;
   }
   if (event === "done") {
-    handlers.onDone?.()
-    return
+    handlers.onDone?.();
+    return;
   }
   if (event === "error") {
     try {
-      const obj = JSON.parse(data) as { message?: string }
-      handlers.onError?.(obj.message ?? data)
+      const obj = JSON.parse(data) as { message?: string };
+      handlers.onError?.(obj.message ?? data);
     } catch {
-      handlers.onError?.(data)
+      handlers.onError?.(data);
     }
-    return
+    return;
   }
   // default token chunk — server sends `data: <JSON-stringified token>`
   try {
-    const parsed = JSON.parse(data) as unknown
-    if (typeof parsed === "string") handlers.onToken?.(parsed)
-    else handlers.onToken?.(data)
+    const parsed = JSON.parse(data) as unknown;
+    if (typeof parsed === "string") handlers.onToken?.(parsed);
+    else handlers.onToken?.(data);
   } catch {
-    handlers.onToken?.(data)
+    handlers.onToken?.(data);
   }
 }

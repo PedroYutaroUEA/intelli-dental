@@ -1,8 +1,8 @@
-# Dental-CRM
+# Intelli-Dental
 
 > CRM inteligente para clínicas odontológicas com assistente RAG por paciente.
 
-Dental-CRM é uma aplicação web de gestão clínica e de pacientes integrada a um serviço privado de **Geração Aumentada por Recuperação (RAG)**. O CRM gerencia clínicas, dentistas, pacientes, agendamentos, anamneses, odontograma e planejamentos de tratamento. O serviço RAG executa localmente (Ollama + ChromaDB) e expõe uma pequena API REST que o backend NestJS proxia, permitindo ao assistente responder perguntas fundamentadas exclusivamente nos registros de **um único paciente**.
+Intelli-Dental é uma aplicação web de gestão clínica e de pacientes integrada a um serviço privado de **Geração Aumentada por Recuperação (RAG)**. O CRM gerencia clínicas, dentistas, pacientes, agendamentos, anamneses, odontograma e planejamentos de tratamento. O serviço RAG executa localmente (Ollama + ChromaDB) e expõe uma pequena API REST que o backend NestJS proxia, permitindo ao assistente responder perguntas fundamentadas exclusivamente nos registros de **um único paciente**.
 
 > **Projeto acadêmico** — Oficina 2 / UEA.
 
@@ -36,19 +36,19 @@ Dental-CRM é uma aplicação web de gestão clínica e de pacientes integrada a
 
 ## Visão geral
 
-| Aspecto | Detalhe |
-|---|---|
-| Tipo | Micro SaaS / Projeto acadêmico |
-| Domínio | Odontologia — gestão de clínicas, pacientes e assistente clínico |
+| Aspecto           | Detalhe                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------- |
+| Tipo              | Micro SaaS / Projeto acadêmico                                                                    |
+| Domínio           | Odontologia — gestão de clínicas, pacientes e assistente clínico                                  |
 | Modelo de tenancy | Multi-tenant (por clínica), com isolamento de dados garantido na camada de banco e no vetor store |
-| Execução | Totalmente local — sem chamadas a APIs externas pagas. LLMs via Ollama |
+| Execução          | Totalmente local — sem chamadas a APIs externas pagas. LLMs via Ollama                            |
 
 ---
 
 ## Layout do repositório
 
 ```
-Dental-CRM/
+intelli-dental/
 ├── app/              # Frontend Next.js 15 / React 19 / TypeScript / Tailwind v4
 ├── api/              # Backend NestJS 11 / Drizzle / Postgres — trust boundary
 ├── rag-pipeline/     # Serviço Fastify — ingestão, embeddings, ChromaDB, chat LLM
@@ -58,11 +58,11 @@ Dental-CRM/
 └── docker-compose.override.yml
 ```
 
-| Caminho | Descrição |
-|---|---|
-| [`app/`](app) | Interface CRM: dashboard, clientes, agenda, odontograma, anamnese, planejamento, financeiro, empresas, assistente. |
-| [`api/`](api) | Auth JWT, membros de clínica, pacientes, agendamentos, anamneses, documentos, chat, proxy RAG. |
-| [`rag-pipeline/`](rag-pipeline) | Ingestão de documentos, embeddings (`nomic-embed-text`), ChromaDB, chat LLaMA / phi3, métricas RAG-Triad. |
+| Caminho                         | Descrição                                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| [`app/`](app)                   | Interface CRM: dashboard, clientes, agenda, odontograma, anamnese, planejamento, financeiro, empresas, assistente. |
+| [`api/`](api)                   | Auth JWT, membros de clínica, pacientes, agendamentos, anamneses, documentos, chat, proxy RAG.                     |
+| [`rag-pipeline/`](rag-pipeline) | Ingestão de documentos, embeddings (`nomic-embed-text`), ChromaDB, chat LLaMA / phi3, métricas RAG-Triad.          |
 
 ---
 
@@ -135,18 +135,18 @@ Documento (PDF/TXT/JSON/HTML)
 
 Tabelas principais (Postgres 16, gerenciadas pelo Drizzle ORM):
 
-| Tabela | Descrição |
-|---|---|
-| `users` | Usuários do sistema (dentistas, assistentes, recepcionistas) |
-| `clinics` | Clínicas cadastradas (soft-delete) |
-| `clinic_members` | Membership + roles (`owner`, `dentist`, `assistant`, `receptionist`) |
-| `patients` | Cadastro de pacientes por clínica (soft-delete, CPF único por clínica) |
-| `appointments` | Agendamentos com status (`requested`, `scheduled`, `confirmed`, `completed`, `cancelled`, `no_show`) |
-| `anamneses` | Ficha anamnésica estruturada (alergias, medicações, histórico, consentimento) |
-| `patient_documents` | Documentos enviados com status de ingestão RAG (`pending`, `processing`, `ready`, `failed`) |
-| `chat_sessions` | Sessões de chat por paciente / usuário / clínica |
-| `chat_messages` | Mensagens com fontes, tokens e métricas RAG-Triad por mensagem |
-| `booking_tokens` | Tokens single-use (sha256) para auto-agendamento de pacientes via link público |
+| Tabela              | Descrição                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------- |
+| `users`             | Usuários do sistema (dentistas, assistentes, recepcionistas)                                         |
+| `clinics`           | Clínicas cadastradas (soft-delete)                                                                   |
+| `clinic_members`    | Membership + roles (`owner`, `dentist`, `assistant`, `receptionist`)                                 |
+| `patients`          | Cadastro de pacientes por clínica (soft-delete, CPF único por clínica)                               |
+| `appointments`      | Agendamentos com status (`requested`, `scheduled`, `confirmed`, `completed`, `cancelled`, `no_show`) |
+| `anamneses`         | Ficha anamnésica estruturada (alergias, medicações, histórico, consentimento)                        |
+| `patient_documents` | Documentos enviados com status de ingestão RAG (`pending`, `processing`, `ready`, `failed`)          |
+| `chat_sessions`     | Sessões de chat por paciente / usuário / clínica                                                     |
+| `chat_messages`     | Mensagens com fontes, tokens e métricas RAG-Triad por mensagem                                       |
+| `booking_tokens`    | Tokens single-use (sha256) para auto-agendamento de pacientes via link público                       |
 
 ---
 
@@ -154,41 +154,41 @@ Tabelas principais (Postgres 16, gerenciadas pelo Drizzle ORM):
 
 ### Frontend (`app/`)
 
-| Tecnologia | Versão | Uso |
-|---|---|---|
-| Next.js | 15 | App Router, RSC, SSE consumer |
-| React | 19 | UI |
-| TypeScript | 5 | Tipagem estática |
-| Tailwind CSS | v4 | Estilização |
-| shadcn-ui / Radix | latest | Componentes acessíveis |
-| react-hook-form + zod | latest | Formulários e validação |
-| lucide-react | latest | Ícones |
-| sonner | latest | Notificações toast |
+| Tecnologia            | Versão | Uso                           |
+| --------------------- | ------ | ----------------------------- |
+| Next.js               | 15     | App Router, RSC, SSE consumer |
+| React                 | 19     | UI                            |
+| TypeScript            | 5      | Tipagem estática              |
+| Tailwind CSS          | v4     | Estilização                   |
+| shadcn-ui / Radix     | latest | Componentes acessíveis        |
+| react-hook-form + zod | latest | Formulários e validação       |
+| lucide-react          | latest | Ícones                        |
+| sonner                | latest | Notificações toast            |
 
 ### API (`api/`)
 
-| Tecnologia | Versão | Uso |
-|---|---|---|
-| NestJS | 11 | Framework HTTP / módulos |
-| Drizzle ORM | latest | Queries type-safe + migrações |
-| Postgres | 16 | Banco relacional principal |
-| JWT (Passport) | — | Autenticação stateless |
-| class-validator | latest | Validação de DTOs |
+| Tecnologia      | Versão | Uso                           |
+| --------------- | ------ | ----------------------------- |
+| NestJS          | 11     | Framework HTTP / módulos      |
+| Drizzle ORM     | latest | Queries type-safe + migrações |
+| Postgres        | 16     | Banco relacional principal    |
+| JWT (Passport)  | —      | Autenticação stateless        |
+| class-validator | latest | Validação de DTOs             |
 
 ### RAG Pipeline (`rag-pipeline/`)
 
-| Tecnologia | Versão | Uso |
-|---|---|---|
-| Fastify | 4 | HTTP server do serviço RAG |
-| ChromaDB (client) | latest | Vetor store com filtro de metadados |
-| Ollama | host | Servidor de LLMs locais |
-| phi3:mini | ~2.3 GB | Modelo de geração (LLM) |
-| nomic-embed-text | ~270 MB | Modelo de embeddings |
-| langchain text splitters | latest | `RecursiveCharacterTextSplitter` |
-| @xenova/transformers | latest | Cross-encoder reranker (opcional) |
-| pdf-parse | latest | Extração de texto de PDFs |
-| cheerio | latest | Parser HTML |
-| zod | latest | Validação de payloads da API |
+| Tecnologia               | Versão  | Uso                                 |
+| ------------------------ | ------- | ----------------------------------- |
+| Fastify                  | 4       | HTTP server do serviço RAG          |
+| ChromaDB (client)        | latest  | Vetor store com filtro de metadados |
+| Ollama                   | host    | Servidor de LLMs locais             |
+| phi3:mini                | ~2.3 GB | Modelo de geração (LLM)             |
+| nomic-embed-text         | ~270 MB | Modelo de embeddings                |
+| langchain text splitters | latest  | `RecursiveCharacterTextSplitter`    |
+| @xenova/transformers     | latest  | Cross-encoder reranker (opcional)   |
+| pdf-parse                | latest  | Extração de texto de PDFs           |
+| cheerio                  | latest  | Parser HTML                         |
+| zod                      | latest  | Validação de payloads da API        |
 
 ---
 
@@ -225,15 +225,15 @@ Mensagens que **não** começam com `/` continuam usando o RAG SSE normal (pergu
 
 ### Referência de comandos
 
-| Comando | Argumentos | Descrição |
-|---|---|---|
-| `/ajuda` | — | Lista todos os comandos disponíveis. Aliases: `/help`. |
-| `/listar` | `[limite=N]` ou `[N]` (1–50, padrão 5) | Mostra os próximos agendamentos do paciente. **Não exige confirmação.** |
-| `/criar` | `dentista=<uuid>` `data=<YYYY-MM-DD HH:mm>` `duracao=<min>` `[motivo="..."]` | Cria uma nova solicitação (status `requested`). Aliases: `/agendar`. |
-| `/remarcar` | `<appointmentId>` `data=<YYYY-MM-DD HH:mm>` `[duracao=<min>]` | Move o horário de um agendamento existente (não-terminal). |
-| `/cancelar` | `<appointmentId>` `[motivo="..."]` | Cancela um agendamento (soft-cancel). |
-| `/confirmar` | `<appointmentId>` | Aprova uma solicitação pendente (`requested` → `confirmed`). Aliases: `/aprovar`. |
-| `/recusar` | `<appointmentId>` `[motivo="..."]` | Recusa uma solicitação pendente. Aliases: `/rejeitar`. |
+| Comando      | Argumentos                                                                   | Descrição                                                                         |
+| ------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `/ajuda`     | —                                                                            | Lista todos os comandos disponíveis. Aliases: `/help`.                            |
+| `/listar`    | `[limite=N]` ou `[N]` (1–50, padrão 5)                                       | Mostra os próximos agendamentos do paciente. **Não exige confirmação.**           |
+| `/criar`     | `dentista=<uuid>` `data=<YYYY-MM-DD HH:mm>` `duracao=<min>` `[motivo="..."]` | Cria uma nova solicitação (status `requested`). Aliases: `/agendar`.              |
+| `/remarcar`  | `<appointmentId>` `data=<YYYY-MM-DD HH:mm>` `[duracao=<min>]`                | Move o horário de um agendamento existente (não-terminal).                        |
+| `/cancelar`  | `<appointmentId>` `[motivo="..."]`                                           | Cancela um agendamento (soft-cancel).                                             |
+| `/confirmar` | `<appointmentId>`                                                            | Aprova uma solicitação pendente (`requested` → `confirmed`). Aliases: `/aprovar`. |
+| `/recusar`   | `<appointmentId>` `[motivo="..."]`                                           | Recusa uma solicitação pendente. Aliases: `/rejeitar`.                            |
 
 **Convenções de argumentos**
 
@@ -266,14 +266,14 @@ Mensagens que **não** começam com `/` continuam usando o RAG SSE normal (pergu
 
 ### Erros comuns
 
-| Mensagem | Causa | Como resolver |
-|---|---|---|
-| `Comando desconhecido: /xyz` | Comando não existe | Use `/ajuda` para ver a lista. |
-| `dentista deve ser um UUID válido.` | UUID malformado | Confira o formato `xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx`. |
-| `Falta data=<YYYY-MM-DD HH:mm>.` | Argumento ausente | Inclua o argumento; lembre das aspas se houver espaço. |
-| `Horário indisponível` (409) | Conflito de overlap com outro agendamento do mesmo dentista | Escolha outro horário e rode o `/criar` ou `/remarcar` novamente. |
-| `Este agendamento já está cancelado.` | Operação em registro terminal | Não há ação a fazer; o registro está finalizado. |
-| `Falha ao confirmar: ...` | Erro no commit (BE retornou erro) | A mensagem inline mostra o motivo (validação, permissão ou conflito). |
+| Mensagem                              | Causa                                                       | Como resolver                                                         |
+| ------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------- |
+| `Comando desconhecido: /xyz`          | Comando não existe                                          | Use `/ajuda` para ver a lista.                                        |
+| `dentista deve ser um UUID válido.`   | UUID malformado                                             | Confira o formato `xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx`.             |
+| `Falta data=<YYYY-MM-DD HH:mm>.`      | Argumento ausente                                           | Inclua o argumento; lembre das aspas se houver espaço.                |
+| `Horário indisponível` (409)          | Conflito de overlap com outro agendamento do mesmo dentista | Escolha outro horário e rode o `/criar` ou `/remarcar` novamente.     |
+| `Este agendamento já está cancelado.` | Operação em registro terminal                               | Não há ação a fazer; o registro está finalizado.                      |
+| `Falha ao confirmar: ...`             | Erro no commit (BE retornou erro)                           | A mensagem inline mostra o motivo (validação, permissão ou conflito). |
 
 ### Endpoint subjacente
 
@@ -285,11 +285,11 @@ Os comandos do chat chamam `POST /chat/sessions/:id/actions` com `{ kind, mode: 
 
 ### Pré-requisitos
 
-| Requisito | Notas |
-|---|---|
-| Docker + Docker Compose | Stack completo roda via compose |
+| Requisito                     | Notas                                                                                                              |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Docker + Docker Compose       | Stack completo roda via compose                                                                                    |
 | [Ollama](https://ollama.com/) | Instalado **no host** (não no Docker por padrão). O script de bootstrap garante que ele escute em `0.0.0.0:11434`. |
-| Node.js ≥ 20 + pnpm | Necessário apenas para o frontend Next.js (roda fora do compose) |
+| Node.js ≥ 20 + pnpm           | Necessário apenas para o frontend Next.js (roda fora do compose)                                                   |
 
 > **GPU (opcional):** Edite `docker-compose.yml` e descomente o bloco `deploy.resources` sob o serviço `ollama`. Requer o [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
@@ -330,57 +330,58 @@ docker compose run --rm rag pnpm ingest --dir data/sample/patient-001 --patient 
 
 ### Comandos úteis
 
-| Comando | Finalidade |
-|---|---|
-| `./scripts/start.sh` | Bootstrap ou refresh do stack |
-| `docker compose logs -f api rag` | Acompanhar logs da API e do RAG |
-| `docker compose down` | Parar o stack |
-| `docker compose down -v` | Parar e **apagar volumes** (reseta DB e ChromaDB) |
-| `docker exec dental-crm-api-1 pnpm db:migrate` | Aplicar migrações pendentes manualmente |
-| `cd api && pnpm db:generate` | Gerar nova migração Drizzle a partir de mudanças no schema |
+| Comando                                            | Finalidade                                                 |
+| -------------------------------------------------- | ---------------------------------------------------------- |
+| `./scripts/start.sh`                               | Bootstrap ou refresh do stack                              |
+| `docker compose logs -f api rag`                   | Acompanhar logs da API e do RAG                            |
+| `docker compose down`                              | Parar o stack                                              |
+| `docker compose down -v`                           | Parar e **apagar volumes** (reseta DB e ChromaDB)          |
+| `docker exec intelli-dental-api-1 pnpm db:migrate` | Aplicar migrações pendentes manualmente                    |
+| `cd api && pnpm db:generate`                       | Gerar nova migração Drizzle a partir de mudanças no schema |
 
 ### Variáveis de ambiente
 
 #### `api/.env` (gerado a partir de `api/.env.example`)
 
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `PORT` | `4000` | Porta da API NestJS |
-| `APP_ORIGIN` | `http://localhost:3567` | Origem do frontend (CORS) |
-| `DATABASE_URL` | `postgres://dental:dental@localhost:5432/dental_crm` | URL de conexão com o Postgres |
-| `JWT_SECRET` | `change-me-in-prod` | Segredo para assinar tokens JWT |
-| `JWT_EXPIRES_IN` | `7d` | Expiração dos tokens |
-| `RAG_URL` | `http://localhost:3000` | URL interna do serviço RAG |
-| `RAG_AUTH_TOKEN` | `change-me-in-prod` | Token compartilhado API ↔ RAG |
-| `DOCUMENTS_DIR` | `./data/documents` | Diretório de documentos dos pacientes |
+| Variável         | Padrão                                                                   | Descrição                             |
+| ---------------- | ------------------------------------------------------------------------ | ------------------------------------- |
+| `PORT`           | `4000`                                                                   | Porta da API NestJS                   |
+| `APP_ORIGIN`     | `http://localhost:3567`                                                  | Origem do frontend (CORS)             |
+| `DATABASE_URL`   | `postgres://intelli-dental:intelli-dental@localhost:5432/intelli-dental` | URL de conexão com o Postgres         |
+| `JWT_SECRET`     | `change-me-in-prod`                                                      | Segredo para assinar tokens JWT       |
+| `JWT_EXPIRES_IN` | `7d`                                                                     | Expiração dos tokens                  |
+| `RAG_URL`        | `http://localhost:3000`                                                  | URL interna do serviço RAG            |
+| `RAG_AUTH_TOKEN` | `change-me-in-prod`                                                      | Token compartilhado API ↔ RAG         |
+| `DOCUMENTS_DIR`  | `./data/documents`                                                       | Diretório de documentos dos pacientes |
 
 #### `rag-pipeline/.env` (gerado a partir de `rag-pipeline/.env.example`)
 
-| Variável | Padrão | Descrição |
-|---|---|---|
-| `OLLAMA_URL` | `http://ollama:11434` | URL do servidor Ollama |
-| `CHROMA_URL` | `http://chroma:8000` | URL do servidor ChromaDB |
-| `LLM_MODEL` | `phi3:mini` | Modelo de geração |
-| `EMBED_MODEL` | `nomic-embed-text` | Modelo de embeddings |
-| `PORT` | `3000` | Porta do serviço RAG |
-| `TOP_K` | `8` | Número de chunks recuperados por consulta |
-| `RERANK` | `false` | Ativar cross-encoder reranker |
-| `RAG_AUTH_TOKEN` | `changeme` | Deve coincidir com o valor na `api/.env` |
+| Variável         | Padrão                | Descrição                                 |
+| ---------------- | --------------------- | ----------------------------------------- |
+| `OLLAMA_URL`     | `http://ollama:11434` | URL do servidor Ollama                    |
+| `CHROMA_URL`     | `http://chroma:8000`  | URL do servidor ChromaDB                  |
+| `LLM_MODEL`      | `phi3:mini`           | Modelo de geração                         |
+| `EMBED_MODEL`    | `nomic-embed-text`    | Modelo de embeddings                      |
+| `PORT`           | `3000`                | Porta do serviço RAG                      |
+| `TOP_K`          | `8`                   | Número de chunks recuperados por consulta |
+| `RERANK`         | `false`               | Ativar cross-encoder reranker             |
+| `RAG_AUTH_TOKEN` | `changeme`            | Deve coincidir com o valor na `api/.env`  |
 
 Para usar um modelo diferente:
+
 ```bash
 LLM_MODEL=llama3.2:3b docker compose up -d
 ```
 
 ### Solução de problemas
 
-| Sintoma | Solução |
-|---|---|
+| Sintoma                                                    | Solução                                                                                                                                |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `rag` não alcança Ollama (`ECONNREFUSED 172.17.0.1:11434`) | Ollama está vinculado ao loopback. Execute `./scripts/start.sh` (corrige automaticamente) ou `OLLAMA_HOST=0.0.0.0:11434 ollama serve`. |
-| `401 Unauthorized` do serviço RAG | `RAG_AUTH_TOKEN` deve ser idêntico em `api/.env` e `rag-pipeline/.env`. |
-| `column "..." does not exist` | Migração pendente. Execute `docker exec dental-crm-api-1 pnpm db:migrate`. |
-| Colisão de portas | O frontend usa `3567`; o RAG usa `3000`. Finalize o processo conflitante ou altere `PORT` em `app/.env.local`. |
-| Re-ranker lento no primeiro uso | O modelo `bge-reranker-base` (~270 MB) é baixado na primeira ativação e cacheado na camada do container. |
+| `401 Unauthorized` do serviço RAG                          | `RAG_AUTH_TOKEN` deve ser idêntico em `api/.env` e `rag-pipeline/.env`.                                                                |
+| `column "..." does not exist`                              | Migração pendente. Execute `docker exec intelli-dental-api-1 pnpm db:migrate`.                                                         |
+| Colisão de portas                                          | O frontend usa `3567`; o RAG usa `3000`. Finalize o processo conflitante ou altere `PORT` em `app/.env.local`.                         |
+| Re-ranker lento no primeiro uso                            | O modelo `bge-reranker-base` (~270 MB) é baixado na primeira ativação e cacheado na camada do container.                               |
 
 ---
 
@@ -393,7 +394,12 @@ Base URL: `http://localhost:3000`
 Retorna status da conexão com Ollama e ChromaDB.
 
 ```json
-{ "ok": true, "ollama": "http://...", "chroma": "http://...", "model": "phi3:mini" }
+{
+  "ok": true,
+  "ollama": "http://...",
+  "chroma": "http://...",
+  "model": "phi3:mini"
+}
 ```
 
 ### `POST /v1/ingest`
@@ -416,13 +422,13 @@ Responde a uma pergunta com streaming Server-Sent Events.
 
 Eventos emitidos:
 
-| Evento | Payload | Descrição |
-|---|---|---|
-| `event: sources` | `[{source, index, distance}]` | Chunks recuperados |
-| `data: "<token>"` | string | Tokens gerados pelo LLM |
-| `event: metrics` | `{contextRelevance, groundedness, answerRelevance, perChunk}` | RAG-Triad pós-geração |
-| `event: done` | `{}` | Fim do stream |
-| `event: error` | `{message}` | Erro durante geração |
+| Evento            | Payload                                                       | Descrição               |
+| ----------------- | ------------------------------------------------------------- | ----------------------- |
+| `event: sources`  | `[{source, index, distance}]`                                 | Chunks recuperados      |
+| `data: "<token>"` | string                                                        | Tokens gerados pelo LLM |
+| `event: metrics`  | `{contextRelevance, groundedness, answerRelevance, perChunk}` | RAG-Triad pós-geração   |
+| `event: done`     | `{}`                                                          | Fim do stream           |
+| `event: error`    | `{message}`                                                   | Erro durante geração    |
 
 ---
 
@@ -447,6 +453,7 @@ Notas clínicas são curtas e densas. **500 caracteres** ≈ 1–2 parágrafos c
 ### Avaliação RAG-Triad sem LLM-as-judge
 
 Em vez de um segundo LLM avaliador (caro e lento), o sistema calcula três métricas via similaridade de embeddings:
+
 - **Context Relevance**: `cosine(question_emb, chunk_embs)` — mede se os chunks recuperados são pertinentes.
 - **Groundedness**: `cosine(sentence_embs, chunk_embs)` por sentença da resposta — mede se a resposta é suportada pelo contexto.
 - **Answer Relevance**: `cosine(question_emb, answer_emb)` — mede se a resposta endereça a pergunta.
@@ -465,17 +472,17 @@ Drizzle ORM oferece inferência de tipos 100% em TypeScript sem geração de có
 
 ## Limitações conhecidas
 
-| Limitação | Detalhe |
-|---|---|
-| **OCR não suportado** | Apenas PDFs com texto extraível funcionam. PDFs escaneados (imagens) são ignorados pelo `pdf-parse`. |
-| **Sem autenticação no RAG service** | O `RAG_AUTH_TOKEN` é um bearer token simples — não há rotação automática. Não expor a porta `3000` publicamente. |
-| **Sem multi-idioma explícito** | O system prompt está em português. Perguntas em inglês funcionam mas a qualidade pode variar com `phi3:mini`. |
-| **Financeiro incompleto** | A rota `/financeiro` está em desenvolvimento — apenas scaffold da UI existe. |
-| **Re-ranker intensivo** | `bge-reranker-base` aumenta latência significativamente em CPU. Desative (`RERANK=false`) se a latência for crítica. |
-| **Sem streaming de ingestão** | Ingestão de diretórios grandes é síncrona e bloqueia o endpoint `POST /v1/ingest` até concluir. |
-| **Volume compartilhado API ↔ RAG** | `api/data` é montado em ambos os containers. Em produção, substituir por object storage (S3/MinIO). |
-| **JWT não revogável** | Tokens expiram em 7 dias. Não há blacklist — logout no cliente simplesmente descarta o token localmente. |
-| **Ollama no host** | O serviço RAG se conecta ao Ollama via `host.docker.internal` / `0.0.0.0:11434`. Em Linux, isso requer `--add-host=host.docker.internal:host-gateway` (já configurado no compose). |
+| Limitação                           | Detalhe                                                                                                                                                                            |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **OCR não suportado**               | Apenas PDFs com texto extraível funcionam. PDFs escaneados (imagens) são ignorados pelo `pdf-parse`.                                                                               |
+| **Sem autenticação no RAG service** | O `RAG_AUTH_TOKEN` é um bearer token simples — não há rotação automática. Não expor a porta `3000` publicamente.                                                                   |
+| **Sem multi-idioma explícito**      | O system prompt está em português. Perguntas em inglês funcionam mas a qualidade pode variar com `phi3:mini`.                                                                      |
+| **Financeiro incompleto**           | A rota `/financeiro` está em desenvolvimento — apenas scaffold da UI existe.                                                                                                       |
+| **Re-ranker intensivo**             | `bge-reranker-base` aumenta latência significativamente em CPU. Desative (`RERANK=false`) se a latência for crítica.                                                               |
+| **Sem streaming de ingestão**       | Ingestão de diretórios grandes é síncrona e bloqueia o endpoint `POST /v1/ingest` até concluir.                                                                                    |
+| **Volume compartilhado API ↔ RAG**  | `api/data` é montado em ambos os containers. Em produção, substituir por object storage (S3/MinIO).                                                                                |
+| **JWT não revogável**               | Tokens expiram em 7 dias. Não há blacklist — logout no cliente simplesmente descarta o token localmente.                                                                           |
+| **Ollama no host**                  | O serviço RAG se conecta ao Ollama via `host.docker.internal` / `0.0.0.0:11434`. Em Linux, isso requer `--add-host=host.docker.internal:host-gateway` (já configurado no compose). |
 
 ---
 
