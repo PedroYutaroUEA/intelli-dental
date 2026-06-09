@@ -48,16 +48,16 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border p-4">
+      <SidebarHeader className="border-b border-sidebar-border/60 p-4 bg-gradient-to-r from-sidebar-primary/10 to-transparent">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
-            <span className="text-sidebar-primary-foreground font-bold">D</span>
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
+            <span className="text-primary-foreground font-bold">D</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sidebar-foreground text-sm">
+            <p className="font-bold text-sidebar-foreground text-base tracking-tight">
               Intelli Dental
             </p>
-            <p className="text-xs text-sidebar-foreground/60 truncate">
+            <p className="text-xs text-sidebar-foreground/50 truncate font-normal">
               {loading ? "Carregando..." : (clinic?.name ?? "Sem clínica")}
             </p>
           </div>
