@@ -72,7 +72,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between px-6 py-4">
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
-                <h1 className="text-2xl font-bold text-foreground">Painel</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">Painel</h1>
               </div>
               <TopNav />
             </div>
@@ -156,8 +156,8 @@ export default function DashboardPage() {
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={appointmentsData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="dia" stroke="#6b7280" />
-                      <YAxis stroke="#6b7280" />
+                      <XAxis dataKey="dia" stroke="#a0aec0" />
+                      <YAxis stroke="#a0aec0" />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: "white",
@@ -168,10 +168,10 @@ export default function DashboardPage() {
                       <Line
                         type="monotone"
                         dataKey="consultas"
-                        stroke="#4A90E2"
-                        strokeWidth={2}
-                        dot={{ fill: "#4A90E2", r: 4 }}
-                        activeDot={{ r: 6 }}
+                        stroke="#7C3AED"
+                        strokeWidth={3}
+                        dot={{ fill: "#7C3AED", r: 5 }}
+                        activeDot={{ r: 7 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -187,8 +187,8 @@ export default function DashboardPage() {
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={financialData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="mes" stroke="#6b7280" />
-                      <YAxis stroke="#6b7280" />
+                      <XAxis dataKey="mes" stroke="#a0aec0" />
+                      <YAxis stroke="#a0aec0" />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: "white",
@@ -198,8 +198,8 @@ export default function DashboardPage() {
                         formatter={(value) => `R$ ${value.toLocaleString("pt-BR")}`}
                       />
                       <Legend />
-                      <Bar dataKey="receita" fill="#6DD4C0" name="Receita" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="despesas" fill="#F59E0B" name="Despesas" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="receita" fill="#7C3AED" name="Receita" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="despesas" fill="#c4b5fd" name="Despesas" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
