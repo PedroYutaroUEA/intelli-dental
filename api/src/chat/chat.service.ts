@@ -3,10 +3,10 @@ import {
   Inject,
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
-import { and, asc, desc, eq } from 'drizzle-orm';
-import { DB, type Db } from '../db/db.module';
-import { chatMessages, chatSessions, patients } from '../db/schema';
+} from "@nestjs/common";
+import { and, asc, desc, eq } from "drizzle-orm";
+import { DB, type Db } from "../db/db.module";
+import { chatMessages, chatSessions, patients } from "../db/schemas";
 
 @Injectable()
 export class ChatService {
@@ -18,7 +18,7 @@ export class ChatService {
       .from(patients)
       .where(and(eq(patients.id, patientId), eq(patients.clinicId, clinicId)))
       .limit(1);
-    if (!p) throw new NotFoundException('Patient not found in active clinic');
+    if (!p) throw new NotFoundException("Patient not found in active clinic");
 
     const [session] = await this.db
       .insert(chatSessions)
@@ -28,7 +28,10 @@ export class ChatService {
   }
 
   async listSessions(clinicId: string, userId: string, patientId?: string) {
-    const conds = [eq(chatSessions.clinicId, clinicId), eq(chatSessions.userId, userId)];
+    const conds = [
+      eq(chatSessions.clinicId, clinicId),
+      eq(chatSessions.userId, userId),
+    ];
     if (patientId) conds.push(eq(chatSessions.patientId, patientId));
     return this.db
       .select()
@@ -44,7 +47,8 @@ export class ChatService {
       .where(eq(chatSessions.id, sessionId))
       .limit(1);
     if (!s) throw new NotFoundException();
-    if (s.clinicId !== clinicId || s.userId !== userId) throw new ForbiddenException();
+    if (s.clinicId !== clinicId || s.userId !== userId)
+      throw new ForbiddenException();
     return s;
   }
 
@@ -58,7 +62,7 @@ export class ChatService {
 
   async appendMessage(
     sessionId: string,
-    role: 'user' | 'assistant',
+    role: "user" | "assistant",
     content: string,
     sources?: unknown,
     metrics?: {
