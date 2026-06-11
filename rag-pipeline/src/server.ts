@@ -9,6 +9,7 @@ import {
   getPromptInfo,
   retrieveForQuestion,
 } from "./rag.js";
+import { deleteByPatient, listSources } from "./store/chromaClient.js";
 
 const app = Fastify({ logger: true });
 
@@ -51,6 +52,14 @@ const ChatBody = z.object({
 
 const EmbedBody = z.object({
   texts: z.array(z.string()).min(1),
+});
+
+const PatientParams = z.object({
+  patientId: z.string().min(1),
+});
+
+const DeleteSourceQuery = z.object({
+  source: z.string().min(1).optional(),
 });
 
 const RetrieveBody = z
@@ -161,6 +170,28 @@ app.post("/v1/embed", async (req, reply) => {
     return reply.code(400).send({ error: parsed.error.flatten() });
   }
   return embedTexts(parsed.data.texts);
+});
+
+app.get("/v1/patients/:patientId/sources", async (req, reply) => {
+  const params = PatientParams.safeParse(req.params);
+  if (!params.success) {
+    return reply.code(400).send({ error: params.error.flatten() });
+  }
+  const sources = await listSources(params.data.patientId);
+  return { sources };
+});
+
+app.delete("/v1/patients/:patientId/sources", async (req, reply) => {
+  const params = PatientParams.safeParse(req.params);
+  if (!params.success) {
+    return reply.code(400).send({ error: params.error.flatten() });
+  }
+  const query = DeleteSourceQuery.safeParse(req.query);
+  if (!query.success) {
+    return reply.code(400).send({ error: query.error.flatten() });
+  }
+  await deleteByPatient(params.data.patientId, query.data.source);
+  return { ok: true };
 });
 
 app.post("/v1/retrieve", async (req, reply) => {

@@ -84,3 +84,35 @@ export async function queryByEmbedding(
   }
   return hits;
 }
+
+/**
+ * Returns the distinct `source` values ingested for a given patient. Used by
+ * the trust-boundary API to show and manage what a patient's corpus contains.
+ */
+export async function listSources(patientId: string): Promise<string[]> {
+  const collection = await getCollection();
+  const res = await collection.get({
+    where: { patientId },
+    include: ["metadatas"] as any,
+  });
+  const sources = new Set<string>();
+  for (const meta of res.metadatas ?? []) {
+    const source = (meta as Record<string, unknown> | null)?.source;
+    if (typeof source === "string" && source.length > 0) sources.add(source);
+  }
+  return [...sources].sort();
+}
+
+/**
+ * Deletes all chunks for a patient, optionally narrowed to a single source.
+ * The `patientId` filter is always enforced so deletes never cross tenants.
+ */
+export async function deleteByPatient(
+  patientId: string,
+  source?: string,
+): Promise<void> {
+  const collection = await getCollection();
+  const where: Record<string, string | number | boolean> = { patientId };
+  if (source) where.source = source;
+  await collection.delete({ where });
+}

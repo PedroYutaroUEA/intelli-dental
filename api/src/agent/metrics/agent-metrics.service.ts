@@ -16,7 +16,16 @@ export interface AgentMetricsReport {
 export class AgentMetricsService {
   constructor(@Inject(DB) private readonly db: Db) {}
 
-  async report(): Promise<AgentMetricsReport> {
+  /**
+   * Aggregated agent metrics. When `clinicId` is provided the report is scoped
+   * to that clinic only, preserving tenant isolation for dashboards.
+   */
+  async report(clinicId?: string): Promise<AgentMetricsReport> {
+    const runScope = clinicId ? sql`where clinic_id = ${clinicId}` : sql``;
+    const childScope = clinicId
+      ? sql`where run_id in (select id from agent_runs where clinic_id = ${clinicId})`
+      : sql``;
+
     const runRows = await this.db.execute<{
       total_runs: string;
       insufficient_runs: string;
@@ -31,6 +40,7 @@ export class AgentMetricsService {
         avg(total_latency_ms)::text as avg_latency_ms,
         sum(total_tokens_in + total_tokens_out)::text as total_tokens
       from agent_runs
+      ${runScope}
     `);
     const runs = runRows.rows[0];
 
@@ -39,6 +49,7 @@ export class AgentMetricsService {
         count(*)::text as total_tools,
         count(*) filter (where ok = false)::text as failed_tools
       from tool_calls
+      ${childScope}
     `);
     const tools = toolRows.rows[0];
 
@@ -47,6 +58,7 @@ export class AgentMetricsService {
         count(*)::text as total_verifications,
         count(*) filter (where kind = 'verification' and faithful = false)::text as failed_verifications
       from agent_evaluations
+      ${childScope}
     `);
     const verification = verificationRows.rows[0];
 

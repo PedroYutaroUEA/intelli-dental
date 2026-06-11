@@ -134,4 +134,9 @@ export class AgentRunsController {
     if (!trace) throw new NotFoundException();
     return trace;
   }
+
+  @Get('metrics')
+  async getMetrics(@ActiveClinic() ctx: ClinicContext) {
+    return this.agent.getMetrics(ctx.clinicId);
+  }
 }

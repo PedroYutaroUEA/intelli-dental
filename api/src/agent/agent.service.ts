@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ChatService } from '../chat/chat.service';
 import { AgentFeatureFlagsService } from './config/agent-feature-flags.service';
 import type { AgentContext, AgentRequest, AgentStreamEvent } from './contracts';
+import { AgentMetricsService } from './metrics/agent-metrics.service';
 import { AgentOrchestrator } from './orchestrator/agent-orchestrator';
 import { AgentTracingService } from './tracing/agent-tracing.service';
 
@@ -12,6 +13,7 @@ export class AgentService {
     private readonly orchestrator: AgentOrchestrator,
     private readonly flags: AgentFeatureFlagsService,
     private readonly tracing: AgentTracingService,
+    private readonly metrics: AgentMetricsService,
   ) {}
 
   getSession(clinicId: string, userId: string, sessionId: string) {
@@ -64,5 +66,9 @@ export class AgentService {
 
   getTrace(runId: string, clinicId: string, userId: string) {
     return this.tracing.getTraceForUser(runId, clinicId, userId);
+  }
+
+  getMetrics(clinicId: string) {
+    return this.metrics.report(clinicId);
   }
 }

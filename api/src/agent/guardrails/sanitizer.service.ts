@@ -4,8 +4,8 @@ import type { RetrievedChunk } from '../contracts';
 @Injectable()
 export class SanitizerService {
   private readonly patterns = [
-    /ignore (all|previous) instructions/i,
-    /disregard (the )?system prompt/i,
+    /ignore\s+(?:all\s+|the\s+)?(?:previous\s+|prior\s+|above\s+|earlier\s+)*instructions/i,
+    /disregard\s+(?:all\s+|the\s+)?(?:previous\s+|prior\s+|above\s+)*(?:instructions|system prompt)/i,
     /reveal (your )?(system )?prompt/i,
     /\b(other|another) patient'?s?\b/i,
   ];

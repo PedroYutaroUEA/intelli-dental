@@ -1,0 +1,54 @@
+==============================================================
+CLÍNICA INTELLIDENTAL - FICHA DE PACIENTE
+==============================================================
+
+DADOS CADASTRAIS
+--------------------------------------------------------------
+Nome completo......: Juliana Fernandes Costa
+Data de nascimento.: 02/07/1995 (30 anos)
+CPF................: 459.713.028-44
+Telefone/WhatsApp..: (31) 98765-1209
+E-mail.............: juliana.costa@email.com
+Endereço...........: Rua dos Inconfidentes, 305 - Savassi, Belo Horizonte/MG
+Convênio...........: Amil Dental (carteirinha 7782-1145)
+Primeira consulta..: 03/03/2026
+
+QUEIXA PRINCIPAL
+--------------------------------------------------------------
+Paciente deseja avaliação para tratamento ortodôntico (aparelho)
+por insatisfação com o alinhamento dos dentes anteriores
+superiores. Relata também manchas amareladas e interesse em
+clareamento dental.
+
+HISTÓRICO MÉDICO
+--------------------------------------------------------------
+- Sem doenças crônicas.
+- Uso de anticoncepcional oral contínuo.
+- Alergia: nega alergias medicamentosas.
+- Não fumante. Consome refrigerante diariamente.
+- Gestante: não.
+
+HISTÓRICO ODONTOLÓGICO
+--------------------------------------------------------------
+- Extração dos quatro sisos realizada em 2019.
+- Sem restaurações ativas.
+- Higiene bucal regular, usa fio dental diariamente.
+- Última limpeza profissional há 8 meses.
+- Apinhamento dentário leve a moderado na arcada superior.
+
+PLANO DE TRATAMENTO SUGERIDO
+--------------------------------------------------------------
+1. Documentação ortodôntica completa (radiografias e fotos).
+2. Avaliação para aparelho fixo ou alinhadores transparentes.
+3. Clareamento dental somente após estabilização ortodôntica.
+4. Profilaxia preventiva antes do início do tratamento.
+
+OBSERVAÇÕES
+--------------------------------------------------------------
+- Prefere contato por WhatsApp para confirmações.
+- Disponibilidade para consultas às quartas e sextas à tarde.
+- Interesse em parcelamento do tratamento ortodôntico.
+
+==============================================================
+Documento gerado para fins de demonstração / fonte de dados.
+==============================================================
