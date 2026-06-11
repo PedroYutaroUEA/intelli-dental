@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { and, eq } from 'drizzle-orm';
 import { DB, type Db } from '../../db/db.module';
-import { clinicMembers } from '../../db/schema';
+import { clinicMembers } from '../../db/schemas';
 
 /**
  * Reads the active clinic from the `X-Clinic-Id` header and verifies the

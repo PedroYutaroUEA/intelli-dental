@@ -183,6 +183,7 @@ Tabelas principais (Postgres 16, gerenciadas pelo Drizzle ORM):
 | ChromaDB (client)        | latest  | Vetor store com filtro de metadados |
 | Ollama                   | host    | Servidor de LLMs locais             |
 | phi3:mini                | ~2.3 GB | Modelo de geração (LLM)             |
+| llama3.2:3b              | ~2 GB   | Upgrade opcional para planejamento  |
 | nomic-embed-text         | ~270 MB | Modelo de embeddings                |
 | langchain text splitters | latest  | `RecursiveCharacterTextSplitter`    |
 | @xenova/transformers     | latest  | Cross-encoder reranker (opcional)   |
@@ -310,6 +311,18 @@ O script é **idempotente** e executa:
 
 As migrações do banco de dados são aplicadas automaticamente na inicialização do container `api`.
 
+Para instalar também o modelo opcional de maior qualidade para tarefas agentic:
+
+```bash
+AGENT_QUALITY_UPGRADE=true ./scripts/start.sh
+```
+
+Depois de instalado, use-o por tarefa:
+
+```bash
+AGENT_PLAN_MODEL=llama3.2:3b AGENT_REWRITE_MODEL=llama3.2:3b docker compose up -d
+```
+
 ### Frontend (Next.js)
 
 O app Next.js roda **no host**, fora do compose:
@@ -353,6 +366,13 @@ docker compose run --rm rag pnpm ingest --dir data/sample/patient-001 --patient 
 | `RAG_URL`        | `http://localhost:3000`                                                  | URL interna do serviço RAG            |
 | `RAG_AUTH_TOKEN` | `change-me-in-prod`                                                      | Token compartilhado API ↔ RAG         |
 | `DOCUMENTS_DIR`  | `./data/documents`                                                       | Diretório de documentos dos pacientes |
+| `OLLAMA_URL`     | `http://localhost:11434`                                                 | URL do Ollama para o gateway agentic  |
+| `LLM_MODEL`      | `phi3:mini`                                                              | Fallback global para modelos locais   |
+| `AGENT_LLM_MODEL` | `phi3:mini`                                                             | Modelo padrão do agente               |
+| `AGENT_PLAN_MODEL` | —                                                                      | Override opcional para planejamento   |
+| `AGENT_REWRITE_MODEL` | —                                                                   | Override opcional para reescrita      |
+
+No Docker Compose, `OLLAMA_URL` é injetado como `http://host.docker.internal:11434` para o container `api` alcançar o Ollama do host.
 
 #### `rag-pipeline/.env` (gerado a partir de `rag-pipeline/.env.example`)
 
@@ -367,10 +387,16 @@ docker compose run --rm rag pnpm ingest --dir data/sample/patient-001 --patient 
 | `RERANK`         | `false`               | Ativar cross-encoder reranker             |
 | `RAG_AUTH_TOKEN` | `changeme`            | Deve coincidir com o valor na `api/.env`  |
 
-Para usar um modelo diferente:
+Para trocar o modelo do RAG legado:
 
 ```bash
 LLM_MODEL=llama3.2:3b docker compose up -d
+```
+
+Para trocar apenas tarefas agentic, prefira as variáveis `AGENT_<TASK>_MODEL`, por exemplo:
+
+```bash
+AGENT_PLAN_MODEL=llama3.2:3b AGENT_REWRITE_MODEL=llama3.2:3b docker compose up -d
 ```
 
 ### Solução de problemas
@@ -378,6 +404,7 @@ LLM_MODEL=llama3.2:3b docker compose up -d
 | Sintoma                                                    | Solução                                                                                                                                |
 | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `rag` não alcança Ollama (`ECONNREFUSED 172.17.0.1:11434`) | Ollama está vinculado ao loopback. Execute `./scripts/start.sh` (corrige automaticamente) ou `OLLAMA_HOST=0.0.0.0:11434 ollama serve`. |
+| `llama3.2:3b` lento ou sem memória                         | O modelo é opcional. Remova `AGENT_PLAN_MODEL` / `AGENT_REWRITE_MODEL` ou volte para `phi3:mini`.                                     |
 | `401 Unauthorized` do serviço RAG                          | `RAG_AUTH_TOKEN` deve ser idêntico em `api/.env` e `rag-pipeline/.env`.                                                                |
 | `column "..." does not exist`                              | Migração pendente. Execute `docker exec intelli-dental-api-1 pnpm db:migrate`.                                                         |
 | Colisão de portas                                          | O frontend usa `3567`; o RAG usa `3000`. Finalize o processo conflitante ou altere `PORT` em `app/.env.local`.                         |
@@ -448,7 +475,7 @@ Notas clínicas são curtas e densas. **500 caracteres** ≈ 1–2 parágrafos c
 
 ### Por que phi3:mini como LLM padrão?
 
-`phi3:mini` (~2.3 GB) roda em CPUs modernas sem GPU dedicada, entrega respostas de qualidade aceitável para domínio clínico em português e inglês, e puxa rápido no primeiro `./scripts/start.sh`. O modelo é configurável via variável de ambiente `LLM_MODEL` para quem quiser usar `llama3.2:3b` ou modelos maiores.
+`phi3:mini` (~2.3 GB) roda em CPUs modernas sem GPU dedicada, entrega respostas de qualidade aceitável para domínio clínico em português e inglês, e puxa rápido no primeiro `./scripts/start.sh`. O modelo é configurável via `LLM_MODEL` no RAG legado e via `AGENT_<TASK>_MODEL` no agente. `llama3.2:3b` é um upgrade opcional para `AGENT_PLAN_MODEL` e `AGENT_REWRITE_MODEL`, não um requisito do MVP.
 
 ### Avaliação RAG-Triad sem LLM-as-judge
 

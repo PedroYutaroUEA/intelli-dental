@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import { DB, type Db } from '../db/db.module';
-import { clinicMembers, clinics, users } from '../db/schema';
+import { clinicMembers, clinics, users } from '../db/schemas';
 import type { CreateClinicDto } from './dto/create-clinic.dto';
 import type { InviteMemberDto } from './dto/invite-member.dto';
 

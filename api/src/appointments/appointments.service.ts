@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { and, asc, eq, gte, lte, ne, sql } from 'drizzle-orm';
 import { DB, type Db } from '../db/db.module';
-import { appointments, clinicMembers, patients } from '../db/schema';
+import { appointments, clinicMembers, patients } from '../db/schemas';
 import type { CreateAppointmentDto } from './dto/create-appointment.dto';
 import type { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import {

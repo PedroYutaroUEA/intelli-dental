@@ -53,12 +53,20 @@ export async function ingest(args: IngestArgs): Promise<{ docs: number; chunks: 
 
   // Chunk every doc, tagging with patientId.
   const items: { text: string; metadata: Record<string, string | number | boolean> }[] = [];
+  const ingestedAt = new Date().toISOString();
   for (const doc of docs) {
     const chunks = await chunkDocument(doc);
     for (const c of chunks) {
       items.push({
         text: c.text,
-        metadata: { ...c.metadata, patientId: args.patient },
+        metadata: {
+          ...c.metadata,
+          patientId: args.patient,
+          sourceType: inferSourceType(c.metadata),
+          docVersion: 1,
+          corpusVersion: 1,
+          ingestedAt,
+        },
       });
     }
   }
@@ -82,6 +90,19 @@ export async function ingest(args: IngestArgs): Promise<{ docs: number; chunks: 
   await upsert(upsertItems);
   console.log(`Ingested ${upsertItems.length} chunks across ${docs.length} document(s) for patient ${args.patient}.`);
   return { docs: docs.length, chunks: upsertItems.length };
+}
+
+function inferSourceType(
+  metadata: Record<string, string | number | boolean>,
+): "anamnesis" | "document" | "appointment" {
+  const source = String(metadata.source ?? "").toLowerCase();
+  const type = String(metadata.type ?? "").toLowerCase();
+  if (source.includes("anamnes")) return "anamnesis";
+  if (source.includes("appointment") || source.includes("agendamento") || source.includes("consulta")) {
+    return "appointment";
+  }
+  if (type === "json" && source.includes("record")) return "appointment";
+  return "document";
 }
 
 // Run as CLI when executed directly.

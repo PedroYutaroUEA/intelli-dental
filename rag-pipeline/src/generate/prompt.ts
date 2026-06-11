@@ -1,5 +1,7 @@
 import type { QueryHit } from "../store/chromaClient.js";
 
+export const CLINICAL_RAG_PROMPT_VERSION = "clinical-rag-v1";
+
 export const SYSTEM_PROMPT = `You are a clinical assistant for a dental CRM. Your job is to answer questions about a single patient using ONLY the CONTEXT block provided below.
 
 Rules:

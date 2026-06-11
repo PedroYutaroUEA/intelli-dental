@@ -18,6 +18,8 @@ import {
   type ChatActionPayload,
   type ChatActionResult,
   type ChatMessage,
+  type AgentPreviewEvent,
+  type AgentStepEvent,
   type PatientDocument,
   type PatientSummary,
   type RagMetrics,
@@ -46,6 +48,20 @@ interface UiMessage {
   }
   /** When set, render an inline confirmation card with Confirmar/Cancelar. */
   pendingAction?: ChatActionPayload
+  step?: string
+  debug?: AgentDebugState
+  agentRunId?: string
+}
+
+interface AgentDebugState {
+  intent?: string
+  queries?: string[]
+  context?: {
+    sufficient?: boolean
+    score?: number
+    missing?: string[]
+  }
+  verified?: boolean
 }
 
 export default function AssistantPage() {
@@ -195,14 +211,60 @@ function AssistantPageInner() {
           }),
         )
       },
-      onDone() {
+      onStep(event) {
+        setMessages((m) =>
+          m.map((msg) =>
+            msg.id === assistantId
+              ? { ...msg, step: event.step, debug: mergeDebug(msg.debug, event) }
+              : msg,
+          ),
+        )
+      },
+      onPreview(event: AgentPreviewEvent) {
+        const action = previewToAction(event)
+        if (!action) return
+        setMessages((m) =>
+          m.map((msg) =>
+            msg.id === assistantId
+              ? { ...msg, pendingAction: action }
+              : msg,
+          ),
+        )
+      },
+      onDone(done) {
         setStreaming(false)
+        setMessages((m) =>
+          m.map((msg) =>
+            msg.id === assistantId
+              ? { ...msg, step: undefined, agentRunId: done?.agentRunId }
+              : msg,
+          ),
+        )
       },
       onError(message) {
         setStreaming(false)
         setError(message)
       },
     })
+  }
+
+  function previewToAction(event: AgentPreviewEvent): ChatActionPayload | null {
+    const kind = event.toolCall.name.replace(/^appointment\./, "")
+    if (
+      kind !== "create" &&
+      kind !== "reschedule" &&
+      kind !== "cancel" &&
+      kind !== "approve" &&
+      kind !== "reject" &&
+      kind !== "list_upcoming"
+    ) {
+      return null
+    }
+    return {
+      kind,
+      mode: "commit",
+      args: event.toolCall.args as ChatActionPayload["args"],
+    }
   }
 
   function stop() {
@@ -289,6 +351,43 @@ function AssistantPageInner() {
         msg.id === messageId ? { ...msg, pendingAction: undefined } : msg,
       ),
     )
+  }
+
+  function mergeDebug(
+    current: AgentDebugState | undefined,
+    event: AgentStepEvent,
+  ): AgentDebugState | undefined {
+    if (!event.data || typeof event.data !== "object") return current
+    const data = event.data as Record<string, unknown>
+    if (event.step === "intent" && typeof data.intent === "string") {
+      return { ...current, intent: data.intent }
+    }
+    if (
+      (event.step === "rewrite" || event.step === "retrieve") &&
+      Array.isArray(data.queries)
+    ) {
+      return {
+        ...current,
+        queries: data.queries.filter((q): q is string => typeof q === "string"),
+      }
+    }
+    if (event.step === "evaluate") {
+      return {
+        ...current,
+        context: {
+          sufficient:
+            typeof data.sufficient === "boolean" ? data.sufficient : undefined,
+          score: typeof data.score === "number" ? data.score : undefined,
+          missing: Array.isArray(data.missing)
+            ? data.missing.filter((m): m is string => typeof m === "string")
+            : undefined,
+        },
+      }
+    }
+    if (event.step === "verify" && typeof data.faithful === "boolean") {
+      return { ...current, verified: data.faithful }
+    }
+    return current
   }
 
   return (
@@ -407,6 +506,42 @@ function AssistantPageInner() {
                       <div className="whitespace-pre-wrap text-sm">
                         {m.content || (streaming ? "Processando resposta clínica..." : "")}
                       </div>
+                      {m.role === "assistant" && m.step && !m.content ? (
+                        <div className="mt-1 text-[11px] text-muted-foreground">
+                          Etapa: {m.step}
+                        </div>
+                      ) : null}
+                      {m.role === "assistant" && m.debug ? (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {m.debug.intent ? (
+                            <Badge variant="outline" className="text-[10px]">
+                              Intent: {m.debug.intent}
+                            </Badge>
+                          ) : null}
+                          {m.debug.queries?.map((query) => (
+                            <Badge key={query} variant="secondary" className="text-[10px]">
+                              Busca: {query}
+                            </Badge>
+                          ))}
+                          {m.debug.context ? (
+                            <Badge variant="outline" className="text-[10px]">
+                              Contexto{" "}
+                              {m.debug.context.sufficient === false ? "insuficiente" : "suficiente"}
+                              {typeof m.debug.context.score === "number"
+                                ? ` ${formatScorePct(m.debug.context.score)}`
+                                : ""}
+                            </Badge>
+                          ) : null}
+                          {typeof m.debug.verified === "boolean" ? (
+                            <Badge
+                              variant={m.debug.verified ? "default" : "destructive"}
+                              className="text-[10px]"
+                            >
+                              {m.debug.verified ? "Verificado" : "Não verificado"}
+                            </Badge>
+                          ) : null}
+                        </div>
+                      ) : null}
                       {m.role === "assistant" && m.metrics ? (
                         <TooltipProvider>
                           <div className="mt-2 flex flex-wrap items-center gap-1">

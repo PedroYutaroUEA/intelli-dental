@@ -21,19 +21,22 @@ export interface TriadMetrics {
  */
 export async function evaluateTriad(args: {
   question: string;
-  answer: string;
+  answer?: string;
   hits: QueryHit[];
 }): Promise<TriadMetrics> {
-  const { question, answer, hits } = args;
+  const { question, hits } = args;
+  const answer = args.answer ?? "";
   const docs = hits.map((h) => h.document);
 
-  // We need embeddings for: question, answer, every chunk — a single batch.
+  // We need embeddings for: question and every chunk. Answer is included only
+  // when present so context-only evaluation can run before generation.
   const sentences = splitSentences(answer);
-  const embedTargets: string[] = [question, answer, ...docs];
+  const hasAnswer = answer.trim().length > 0;
+  const embedTargets: string[] = hasAnswer ? [question, answer, ...docs] : [question, ...docs];
   const embeddings = await embed(embedTargets);
   const qEmb = embeddings[0]!;
-  const aEmb = embeddings[1]!;
-  const chunkEmbs = embeddings.slice(2);
+  const aEmb = hasAnswer ? embeddings[1]! : null;
+  const chunkEmbs = embeddings.slice(hasAnswer ? 2 : 1);
 
   // Context relevance: similarity(question, each selected chunk) in [0,1].
   const perChunk = chunkEmbs.map((cEmb) => clamp01(cosine(qEmb, cEmb)));
@@ -42,7 +45,7 @@ export async function evaluateTriad(args: {
     perChunk.length > 0 ? perChunk.reduce((s, x) => s + x, 0) / perChunk.length : 0;
 
   // Cosine of normalized embeddings is in [-1, 1]; clamp to [0, 1].
-  const answerRelevance = clamp01(cosine(qEmb, aEmb));
+  const answerRelevance = aEmb ? clamp01(cosine(qEmb, aEmb)) : 0;
 
   let groundedness = 0;
   if (sentences.length > 0 && chunkEmbs.length > 0) {

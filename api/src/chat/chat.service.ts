@@ -71,6 +71,12 @@ export class ChatService {
       answerRelevance?: number | null;
       perChunk?: number[] | null;
     },
+    agent?: {
+      agentRunId?: string;
+      intent?: string;
+      verification?: unknown;
+      fallbackUsed?: boolean;
+    },
   ) {
     const [row] = await this.db
       .insert(chatMessages)
@@ -83,6 +89,10 @@ export class ChatService {
         groundedness: metrics?.groundedness ?? null,
         answerRelevance: metrics?.answerRelevance ?? null,
         metricsPerChunk: (metrics?.perChunk ?? null) as never,
+        agentRunId: agent?.agentRunId,
+        intent: agent?.intent,
+        verification: agent?.verification as never,
+        fallbackUsed: agent?.fallbackUsed,
       })
       .returning();
     return row;

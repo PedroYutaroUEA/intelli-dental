@@ -81,6 +81,11 @@ services:
       RAG_URL: http://rag:3000
       RAG_AUTH_TOKEN: ${RAG_AUTH_TOKEN:-changeme}
       DOCUMENTS_DIR: /app/data/documents
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      LLM_MODEL: ${LLM_MODEL:-phi3:mini}
+      AGENT_LLM_MODEL: ${AGENT_LLM_MODEL:-phi3:mini}
+      AGENT_PLAN_MODEL: ${AGENT_PLAN_MODEL:-}
+      AGENT_REWRITE_MODEL: ${AGENT_REWRITE_MODEL:-}
     volumes:
       - ./api/data:/app/data
     ports:

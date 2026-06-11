@@ -11,7 +11,7 @@ import {
   appointments,
   patientDocuments,
   patients,
-} from '../db/schema';
+} from '../db/schemas';
 import type { CreatePatientDto } from './dto/create-patient.dto';
 import type { UpdatePatientDto } from './dto/update-patient.dto';
 

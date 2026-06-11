@@ -11,7 +11,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { DB, type Db } from '../db/db.module';
-import { anamneses, patients } from '../db/schema';
+import { anamneses, patients } from '../db/schemas';
 import { RagService } from '../rag/rag.service';
 import type { CreateAnamnesisDto } from './dto/create-anamnesis.dto';
 import type { UpdateAnamnesisDto } from './dto/update-anamnesis.dto';

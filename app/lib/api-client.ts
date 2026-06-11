@@ -628,6 +628,10 @@ export interface ChatMessage {
   groundedness?: number | null;
   answerRelevance?: number | null;
   metricsPerChunk?: number[] | null;
+  agentRunId?: string | null;
+  intent?: string | null;
+  verification?: unknown;
+  fallbackUsed?: boolean;
   createdAt: string;
 }
 
@@ -701,11 +705,34 @@ export interface RagMetrics {
   perChunk: number[];
 }
 
+export interface AgentStepEvent {
+  type: "step";
+  step: string;
+  data?: unknown;
+}
+
+export interface AgentPreviewEvent {
+  type: "preview";
+  toolCall: {
+    id: string;
+    name: string;
+    args: Record<string, unknown>;
+    mode: "preview" | "commit";
+  };
+  render?: unknown;
+}
+
+export interface AgentDoneEvent {
+  agentRunId?: string;
+}
+
 export interface StreamHandlers {
   onSources?: (sources: SourceRef[]) => void;
   onToken?: (token: string) => void;
   onMetrics?: (metrics: RagMetrics) => void;
-  onDone?: () => void;
+  onStep?: (event: AgentStepEvent) => void;
+  onPreview?: (event: AgentPreviewEvent) => void;
+  onDone?: (event?: AgentDoneEvent) => void;
   onError?: (message: string) => void;
 }
 
@@ -726,7 +753,7 @@ export function streamChat(
   (async () => {
     try {
       const res = await fetch(
-        `${BASE}/${VERSION}/chat/sessions/${sessionId}/messages`,
+        `${BASE}/${VERSION}/chat/sessions/${sessionId}/agent`,
         {
           method: "POST",
           headers: buildHeaders({ accept: "text/event-stream" }),
@@ -742,6 +769,7 @@ export function streamChat(
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let doneSeen = false;
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -750,10 +778,10 @@ export function streamChat(
         while ((idx = buffer.indexOf("\n\n")) !== -1) {
           const evt = buffer.slice(0, idx);
           buffer = buffer.slice(idx + 2);
-          handleEvent(evt, handlers);
+          if (handleEvent(evt, handlers)) doneSeen = true;
         }
       }
-      handlers.onDone?.();
+      if (!doneSeen) handlers.onDone?.();
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
       handlers.onError?.((err as Error).message);
@@ -763,7 +791,7 @@ export function streamChat(
   return controller;
 }
 
-function handleEvent(raw: string, handlers: StreamHandlers) {
+function handleEvent(raw: string, handlers: StreamHandlers): boolean {
   const lines = raw.split("\n");
   let event: string | undefined;
   const dataLines: string[] = [];
@@ -772,7 +800,7 @@ function handleEvent(raw: string, handlers: StreamHandlers) {
     else if (line.startsWith("data:"))
       dataLines.push(line.slice(5).trimStart());
   }
-  if (dataLines.length === 0) return;
+  if (dataLines.length === 0) return false;
   const data = dataLines.join("\n");
 
   if (event === "sources") {
@@ -781,7 +809,7 @@ function handleEvent(raw: string, handlers: StreamHandlers) {
     } catch {
       /* ignore */
     }
-    return;
+    return false;
   }
   if (event === "metrics") {
     try {
@@ -789,11 +817,31 @@ function handleEvent(raw: string, handlers: StreamHandlers) {
     } catch {
       /* ignore */
     }
-    return;
+    return false;
   }
   if (event === "done") {
-    handlers.onDone?.();
-    return;
+    try {
+      handlers.onDone?.(JSON.parse(data) as AgentDoneEvent);
+    } catch {
+      handlers.onDone?.();
+    }
+    return true;
+  }
+  if (event === "step") {
+    try {
+      handlers.onStep?.(JSON.parse(data) as AgentStepEvent);
+    } catch {
+      /* ignore */
+    }
+    return false;
+  }
+  if (event === "preview") {
+    try {
+      handlers.onPreview?.(JSON.parse(data) as AgentPreviewEvent);
+    } catch {
+      /* ignore */
+    }
+    return false;
   }
   if (event === "error") {
     try {
@@ -802,7 +850,7 @@ function handleEvent(raw: string, handlers: StreamHandlers) {
     } catch {
       handlers.onError?.(data);
     }
-    return;
+    return false;
   }
   // default token chunk — server sends `data: <JSON-stringified token>`
   try {
@@ -812,4 +860,5 @@ function handleEvent(raw: string, handlers: StreamHandlers) {
   } catch {
     handlers.onToken?.(data);
   }
+  return false;
 }

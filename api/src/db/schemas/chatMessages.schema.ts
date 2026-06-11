@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -10,6 +11,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { chatSessions } from "./chatSessions.schema";
+import { agentRuns } from "./agent/agentRuns.schema";
 
 export const chatRoleEnum = pgEnum("chat_role", [
   "user",
@@ -33,6 +35,12 @@ export const chatMessages = pgTable(
     groundedness: real("groundedness"),
     answerRelevance: real("answer_relevance"),
     metricsPerChunk: jsonb("metrics_per_chunk"),
+    agentRunId: uuid("agent_run_id").references(() => agentRuns.id, {
+      onDelete: "set null",
+    }),
+    intent: text("intent"),
+    verification: jsonb("verification"),
+    fallbackUsed: boolean("fallback_used").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

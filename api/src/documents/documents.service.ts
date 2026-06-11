@@ -12,7 +12,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { DB, type Db } from '../db/db.module';
-import { patientDocuments, patients } from '../db/schema';
+import { patientDocuments, patients } from '../db/schemas';
 import { RagService } from '../rag/rag.service';
 
 export interface UploadedFile {

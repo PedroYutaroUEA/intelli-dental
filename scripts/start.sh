@@ -4,6 +4,7 @@
 #
 # - Ensures host Ollama is running and reachable from containers (0.0.0.0).
 # - Pulls required Ollama models (phi3:mini, nomic-embed-text).
+# - Optionally pulls the quality-upgrade model (llama3.2:3b).
 # - Copies *.env.example -> *.env on first run.
 # - Builds and starts the stack with docker compose.
 # - Waits for services to become healthy and tails relevant logs.
@@ -13,11 +14,13 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 OLLAMA_PORT="${OLLAMA_PORT:-11434}"
 OLLAMA_MODELS=("phi3:mini" "nomic-embed-text")
+OLLAMA_QUALITY_MODELS=("llama3.2:3b")
+AGENT_QUALITY_UPGRADE="${AGENT_QUALITY_UPGRADE:-false}"
 OLLAMA_LOG="${TMPDIR:-/tmp}/intelli-dental-ollama.log"
 
 c_red()    { printf '\033[31m%s\033[0m\n' "$*" >&2; }
@@ -88,7 +91,11 @@ fi
 # ----------------------------------------------------------------------------
 # 3. Pull required models if missing
 # ----------------------------------------------------------------------------
-step "Ensuring required Ollama models are present"
+if [[ "${AGENT_QUALITY_UPGRADE}" == "true" ]]; then
+  OLLAMA_MODELS+=("${OLLAMA_QUALITY_MODELS[@]}")
+fi
+
+step "Ensuring Ollama models are present"
 existing_models="$(curl -sf "http://127.0.0.1:${OLLAMA_PORT}/api/tags" | tr ',' '\n' | grep -oE '"name":"[^"]+"' | sed 's/.*:"//;s/"//' || true)"
 for model in "${OLLAMA_MODELS[@]}"; do
   if grep -Fxq "${model}" <<<"${existing_models}"; then
@@ -98,6 +105,12 @@ for model in "${OLLAMA_MODELS[@]}"; do
     OLLAMA_HOST="127.0.0.1:${OLLAMA_PORT}" ollama pull "${model}"
   fi
 done
+
+if [[ "${AGENT_QUALITY_UPGRADE}" == "true" ]]; then
+  c_green "Quality upgrade enabled. Recommended routing: AGENT_PLAN_MODEL=llama3.2:3b and AGENT_REWRITE_MODEL=llama3.2:3b."
+else
+  c_yellow "Quality upgrade disabled. Set AGENT_QUALITY_UPGRADE=true to also pull llama3.2:3b."
+fi
 
 # ----------------------------------------------------------------------------
 # 4. Seed .env files on first run

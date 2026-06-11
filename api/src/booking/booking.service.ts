@@ -17,7 +17,7 @@ import {
   clinics,
   patients,
   users,
-} from '../db/schema';
+} from '../db/schemas';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { SubmitBookingDto } from './dto/booking.dto';
 

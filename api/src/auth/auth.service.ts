@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { eq } from 'drizzle-orm';
 import { DB, type Db } from '../db/db.module';
-import { clinicMembers, clinics, users } from '../db/schema';
+import { clinicMembers, clinics, users } from '../db/schemas';
 import type { LoginDto } from './dto/login.dto';
 import type { SignupDto } from './dto/signup.dto';
 
