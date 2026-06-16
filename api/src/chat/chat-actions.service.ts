@@ -151,9 +151,9 @@ export class ChatActionsService {
         startsAt,
         endsAt,
       );
-      const summary = `Criar agendamento em ${this.fmtDateTime(startsAt)} (${args.durationMinutes} min)${
+      const summary = `Prévia: agendamento em ${this.fmtDateTime(startsAt)} (${args.durationMinutes} min)${
         args.reason ? ` — motivo: ${args.reason}` : ''
-      }.`;
+      }. Confirme para salvar no banco.`;
       return {
         ok: true,
         kind: 'create',

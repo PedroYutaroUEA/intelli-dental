@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, ilike, isNotNull } from 'drizzle-orm';
+import { and, eq, ilike, inArray, isNotNull } from 'drizzle-orm';
 import { DB, type Db } from '../../db/db.module';
 import { clinicMembers, users } from '../../db/schemas';
 import type { AgentContext } from '../contracts';
@@ -10,9 +10,34 @@ export interface DentistResolution {
   candidates?: Array<{ id: string; fullName: string }>;
 }
 
+export interface ClinicDentist {
+  id: string;
+  fullName: string;
+  cro: string | null;
+}
+
 @Injectable()
 export class DentistResolverService {
   constructor(@Inject(DB) private readonly db: Db) {}
+
+  async listAvailable(ctx: AgentContext): Promise<ClinicDentist[]> {
+    return await this.db
+      .select({
+        id: users.id,
+        fullName: users.fullName,
+        cro: users.cro,
+      })
+      .from(clinicMembers)
+      .innerJoin(users, eq(users.id, clinicMembers.userId))
+      .where(
+        and(
+          eq(clinicMembers.clinicId, ctx.clinicId),
+          inArray(clinicMembers.role, ['dentist', 'owner']),
+          eq(clinicMembers.isActive, true),
+          isNotNull(clinicMembers.acceptedAt),
+        ),
+      );
+  }
 
   async resolveByName(ctx: AgentContext, rawName: string): Promise<DentistResolution> {
     const name = rawName.trim();
@@ -30,7 +55,7 @@ export class DentistResolverService {
       .where(
         and(
           eq(clinicMembers.clinicId, ctx.clinicId),
-          eq(clinicMembers.role, 'dentist'),
+          inArray(clinicMembers.role, ['dentist', 'owner']),
           eq(clinicMembers.isActive, true),
           isNotNull(clinicMembers.acceptedAt),
           ilike(users.fullName, `%${name}%`),

@@ -15,6 +15,67 @@ const context: AgentContext = {
 };
 
 describe('IntentRouterService', () => {
+  it('routes dentist availability questions to the tool path', async () => {
+    let llmCalls = 0;
+    const router = new IntentRouterService(
+      {
+        complete: async () => {
+          llmCalls += 1;
+          return {
+            text: '{}',
+            parsedJson: {},
+            model: 'phi3:mini',
+            tokensIn: 0,
+            tokensOut: 0,
+            latencyMs: 0,
+            fallbackModelUsed: false,
+          };
+        },
+      } as any,
+      new HeuristicRouter(),
+    );
+
+    const result = await router.classify('Quais dentistas estão disponíveis na clínica?', context);
+
+    assert.equal(result.intent, 'action_request');
+    assert.equal(result.reason, 'heuristic_dentist_list');
+    assert.equal(result.needsTool, true);
+    assert.equal(result.needsRetrieval, false);
+    assert.equal(llmCalls, 0);
+  });
+
+  it('routes natural-language appointment scheduling to action_request before RAG', async () => {
+    let llmCalls = 0;
+    const router = new IntentRouterService(
+      {
+        complete: async () => {
+          llmCalls += 1;
+          return {
+            text: '{}',
+            parsedJson: {},
+            model: 'phi3:mini',
+            tokensIn: 0,
+            tokensOut: 0,
+            latencyMs: 0,
+            fallbackModelUsed: false,
+          };
+        },
+      } as any,
+      new HeuristicRouter(),
+    );
+
+    const result = await router.classify(
+      'Agende uma consulta com o dr Wanderberg em 2026-06-20 as 11:00 por 30 minutos para limpeza',
+      context,
+    );
+
+    assert.equal(result.intent, 'action_request');
+    assert.equal(result.reason, 'heuristic_action_request');
+    assert.equal(result.needsTool, true);
+    assert.equal(result.needsRetrieval, false);
+    assert.equal(llmCalls, 0);
+  });
+
   it('accepts model-classified action requests for natural-language tools', async () => {
     const router = new IntentRouterService(
       {
@@ -38,7 +99,7 @@ describe('IntentRouterService', () => {
     );
 
     const result = await router.classify(
-      'Crie uma consulta com o dentista amanhã às 14h',
+      'Preciso organizar um atendimento amanhã às 14h',
       context,
     );
 

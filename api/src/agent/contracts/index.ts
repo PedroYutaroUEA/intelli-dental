@@ -164,6 +164,7 @@ export interface ToolSelectionResult {
   action?: ChatActionDto;
   missingArgs: string[];
   message?: string;
+  data?: unknown;
   modelUsage?: ModelUsage;
 }
 

@@ -26,6 +26,9 @@ export class ToolSelectorService {
   ) {}
 
   async select(question: string, ctx: AgentContext): Promise<ToolSelectionResult> {
+    const dentistList = await this.tryListDentists(question, ctx);
+    if (dentistList) return dentistList;
+
     const availableTools = this.tools.listAvailableTools(ctx);
     if (availableTools.length === 0) {
       return {
@@ -57,10 +60,7 @@ export class ToolSelectorService {
     });
 
     const parsed = (res.parsedJson ?? {}) as ParsedToolSelection;
-    const toolName = typeof parsed.tool === 'string' ? parsed.tool : null;
-    const tool = toolName
-      ? availableTools.find((item) => item.name === toolName)
-      : undefined;
+    const tool = this.resolveTool(parsed.tool, availableTools, question);
     if (!tool) {
       return {
         tool: null,
@@ -71,6 +71,7 @@ export class ToolSelectorService {
     }
 
     const args = this.cleanArgs(parsed.args, tool);
+    this.applyHeuristicArgs(question, tool, args);
     const resolutionMessage = await this.resolveDentistName(tool, args, ctx);
     if (resolutionMessage) {
       return {
@@ -113,6 +114,144 @@ export class ToolSelectorService {
       out[key] = value;
     }
     return out;
+  }
+
+  private async tryListDentists(
+    question: string,
+    ctx: AgentContext,
+  ): Promise<ToolSelectionResult | undefined> {
+    if (!this.looksLikeDentistList(question)) return undefined;
+    if (!this.dentists) {
+      return {
+        tool: 'clinic.list_dentists',
+        missingArgs: [],
+        message: 'Não consegui consultar os dentistas da clínica agora.',
+      };
+    }
+
+    const dentists = await this.dentists.listAvailable(ctx);
+    if (dentists.length === 0) {
+      return {
+        tool: 'clinic.list_dentists',
+        missingArgs: [],
+        message: 'Não encontrei dentistas ativos cadastrados nesta clínica.',
+        data: { dentists },
+      };
+    }
+
+    return {
+      tool: 'clinic.list_dentists',
+      missingArgs: [],
+      message: [
+        'Dentistas ativos nesta clínica:',
+        ...dentists.map((dentist) =>
+          `- ${dentist.fullName}${dentist.cro ? ` (CRO: ${dentist.cro})` : ''}`,
+        ),
+      ].join('\n'),
+      data: { dentists },
+    };
+  }
+
+  private looksLikeDentistList(question: string): boolean {
+    const lower = question.toLowerCase();
+    return (
+      /\b(quais|liste|listar|mostre|mostrar|quem|dispon[ií]veis?|available|list|show|which)\b/.test(lower) &&
+      /\b(dentistas?|drs?\.?|doutores?|profissionais?)\b/.test(lower)
+    );
+  }
+
+  private resolveTool(
+    rawTool: unknown,
+    availableTools: ToolManifestEntry[],
+    question: string,
+  ): ToolManifestEntry | undefined {
+    const toolName = typeof rawTool === 'string' ? rawTool.trim() : '';
+    const direct = availableTools.find((item) => item.name === toolName);
+    if (direct) return direct;
+
+    const aliases: Record<string, string> = {
+      create: 'appointment.create',
+      criar: 'appointment.create',
+      agendar: 'appointment.create',
+      schedule: 'appointment.create',
+      book: 'appointment.create',
+      create_appointment: 'appointment.create',
+      schedule_appointment: 'appointment.create',
+      book_appointment: 'appointment.create',
+      'appointment.schedule': 'appointment.create',
+      'appointment.book': 'appointment.create',
+    };
+    const aliasedName = aliases[toolName.toLowerCase()];
+    if (aliasedName) {
+      const aliased = availableTools.find((item) => item.name === aliasedName);
+      if (aliased) return aliased;
+    }
+
+    if (this.looksLikeAppointmentCreate(question)) {
+      return availableTools.find((item) => item.name === 'appointment.create');
+    }
+    return undefined;
+  }
+
+  private looksLikeAppointmentCreate(question: string): boolean {
+    const lower = question.toLowerCase();
+    return (
+      /\b(agende|agendar|agenda|marque|marcar|crie|criar|book|schedule)\b/.test(lower) &&
+      /\b(consulta|agendamento|limpeza|atendimento|dentista|dr\.?|dra\.?)\b/.test(lower)
+    );
+  }
+
+  private applyHeuristicArgs(
+    question: string,
+    tool: ToolManifestEntry,
+    args: Record<string, unknown>,
+  ) {
+    if (tool.kind !== 'create') return;
+    const dentistName = this.extractDentistName(question);
+    if (typeof args.dentistId !== 'string' && dentistName) {
+      args.dentistName = dentistName;
+    }
+    this.setMissingArg(args, 'startsAt', this.extractStartsAt(question));
+    this.setMissingArg(args, 'durationMinutes', this.extractDurationMinutes(question));
+    this.setMissingArg(args, 'reason', this.extractReason(question));
+  }
+
+  private setMissingArg(args: Record<string, unknown>, key: string, value: unknown) {
+    if (args[key] == null && value != null) args[key] = value;
+  }
+
+  private extractDentistName(question: string): string | undefined {
+    const match = question.match(
+      /\b(?:com|para|pelo|pela)\s+(?:o\s+|a\s+)?((?:(?:dr\.?|dra\.?|doutor|doutora|dentista)\s+)?[\p{L}.' -]+?)(?=\s+(?:em|no|na|dia|às|as|por|para)\b|$)/iu,
+    );
+    return match?.[1]?.trim().replace(/\s+/g, ' ');
+  }
+
+  private extractStartsAt(question: string): string | undefined {
+    const match = question.match(
+      /\b(\d{4}-\d{2}-\d{2})\b.{0,24}?\b(?:às|as)?\s*(\d{1,2}):(\d{2})\b/i,
+    );
+    if (!match) return undefined;
+    const hour = match[2].padStart(2, '0');
+    const date = new Date(`${match[1]}T${hour}:${match[3]}:00`);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+  }
+
+  private extractDurationMinutes(question: string): number | undefined {
+    const match = question.match(/\bpor\s+(\d{1,3})\s*(?:min|mins|minutos?)\b/i);
+    if (!match) return undefined;
+    const minutes = Number(match[1]);
+    if (!Number.isInteger(minutes) || minutes < 5 || minutes > 480) return undefined;
+    return minutes;
+  }
+
+  private extractReason(question: string): string | undefined {
+    const match = question.match(/\bpara\s+(.+)$/i);
+    const reason = match?.[1]?.trim();
+    if (!reason || /\b(?:o\s+|a\s+)?(?:dr\.?|dra\.?|doutor|doutora|dentista)\b/i.test(reason)) {
+      return undefined;
+    }
+    return reason.slice(0, 500);
   }
 
   private missingArgs(raw: unknown, tool: ToolManifestEntry, args: Record<string, unknown>): string[] {

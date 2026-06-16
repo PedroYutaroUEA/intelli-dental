@@ -104,6 +104,30 @@ export class IntentRouterService {
       };
     }
     const lower = question.toLowerCase();
+    if (
+      /\b(quais|liste|listar|mostre|mostrar|quem|dispon[ií]veis?|available|list|show|which)\b/.test(lower) &&
+      /\b(dentistas?|drs?\.?|doutores?|profissionais?)\b/.test(lower)
+    ) {
+      return {
+        intent: 'action_request',
+        confidence: 0.85,
+        needsRetrieval: false,
+        needsTool: true,
+        reason: 'heuristic_dentist_list',
+      };
+    }
+    if (
+      /\b(agende|agendar|agenda|marque|marcar|crie|criar|remarque|remarcar|cancele|cancelar|confirme|confirmar|aprove|aprovar|recuse|recusar)\b/.test(lower) &&
+      /\b(agendamento|agendamentos|consulta|consultas|hor[aá]rio|dentista|dr\.?|dra\.?)\b/.test(lower)
+    ) {
+      return {
+        intent: 'action_request',
+        confidence: 0.85,
+        needsRetrieval: false,
+        needsTool: true,
+        reason: 'heuristic_action_request',
+      };
+    }
     if (/\b(resuma|resumir|resumo|sumarize)\b/.test(lower)) {
       return {
         intent: 'document_summary',
