@@ -6,6 +6,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -123,6 +124,24 @@ export class AgentController {
 @Controller({ path: 'agent', version: '1' })
 export class AgentRunsController {
   constructor(private readonly agent: AgentService) {}
+
+  @Get('runs')
+  async listAgentRuns(
+    @ActiveClinic() ctx: ClinicContext,
+    @CurrentUser() user: { userId: string },
+    @Query('sessionId') sessionId?: string,
+    @Query('patientId') patientId?: string,
+    @Query('limit') rawLimit?: string,
+  ) {
+    const parsedLimit = rawLimit ? Number(rawLimit) : undefined;
+    return this.agent.listTraces({
+      clinicId: ctx.clinicId,
+      userId: user.userId,
+      sessionId,
+      patientId,
+      limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
+    });
+  }
 
   @Get('runs/:runId')
   async getAgentRun(

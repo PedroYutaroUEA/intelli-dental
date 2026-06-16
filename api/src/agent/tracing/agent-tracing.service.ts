@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { DB, type Db } from '../../db/db.module';
 import { agentEvaluations, agentRuns, agentSteps, chatSessions, promptVersions, retrievedChunks, toolCalls } from '../../db/schemas';
 import type { AgentContext, AgentStepType, ContextEvaluation, RetrievedChunk, ToolCall, VerificationResult } from '../contracts';
@@ -148,10 +148,39 @@ export class AgentTracingService implements OnModuleInit {
       .where(and(eq(agentRuns.id, runId), eq(agentRuns.clinicId, clinicId), eq(agentRuns.userId, userId)))
       .limit(1);
     if (!run) return null;
+    return this.hydrateRun(run);
+  }
+
+  async listTracesForUser(input: {
+    clinicId: string;
+    userId: string;
+    sessionId?: string;
+    patientId?: string;
+    limit?: number;
+  }) {
+    const limit = Math.min(Math.max(input.limit ?? 20, 1), 50);
+    const filters = [
+      eq(agentRuns.clinicId, input.clinicId),
+      eq(agentRuns.userId, input.userId),
+    ];
+    if (input.sessionId) filters.push(eq(agentRuns.sessionId, input.sessionId));
+    if (input.patientId) filters.push(eq(agentRuns.patientId, input.patientId));
+
+    const runs = await this.db
+      .select()
+      .from(agentRuns)
+      .where(and(...filters))
+      .orderBy(desc(agentRuns.createdAt))
+      .limit(limit);
+
+    return Promise.all(runs.map((run) => this.hydrateRun(run)));
+  }
+
+  private async hydrateRun(run: typeof agentRuns.$inferSelect) {
     const steps = await this.db
       .select()
       .from(agentSteps)
-      .where(eq(agentSteps.runId, runId))
+      .where(eq(agentSteps.runId, run.id))
       .orderBy(agentSteps.seq);
     const chunks = await this.db
       .select({
@@ -164,15 +193,15 @@ export class AgentTracingService implements OnModuleInit {
         score: retrievedChunks.score,
       })
       .from(retrievedChunks)
-      .where(eq(retrievedChunks.runId, runId));
+      .where(eq(retrievedChunks.runId, run.id));
     const evaluations = await this.db
       .select()
       .from(agentEvaluations)
-      .where(eq(agentEvaluations.runId, runId));
+      .where(eq(agentEvaluations.runId, run.id));
     const tools = await this.db
       .select()
       .from(toolCalls)
-      .where(eq(toolCalls.runId, runId));
+      .where(eq(toolCalls.runId, run.id));
     return { run, steps, chunks, evaluations, tools };
   }
 

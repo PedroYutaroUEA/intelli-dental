@@ -306,17 +306,17 @@ txt(s, Inches(0.86), Inches(2.45), Inches(8.3), Inches(2.4),
     space_after=2, line_spacing=1.02)
 rect(s, Inches(0.92), Inches(5.15), Inches(3.4), Inches(0.04), SLATE)
 txt(s, Inches(0.9), Inches(5.35), Inches(8), Inches(0.8),
-    [P("Arquitetura de um MVP acadêmico com múltiplos agentes", 18, SLATE_LT, False)],
+    [P("Arquitetura técnica atual: CRM, RAG local, orquestração agentic e observabilidade", 18, SLATE_LT, False)],
     space_after=0)
 txt(s, Inches(0.9), Inches(6.55), Inches(9), Inches(0.5),
-    [P("Recuperação · Planejamento · Validação · Ferramentas · Respostas com fontes",
+    [P("Next.js · NestJS · Postgres · ChromaDB · Ollama · Agent traces",
        13, SLATE_LT, False)], space_after=0)
 notes(s, "Boa tarde. Vou apresentar um MVP acadêmico de um CRM para clínicas "
          "odontológicas que incorpora um chat inteligente. O diferencial é a "
-         "evolução de um RAG tradicional (busca + LLM) para um Agentic RAG, "
-         "onde múltiplos agentes especializados cooperam para planejar, recuperar, "
-         "validar e responder. Nos próximos slides explico o problema, a proposta, "
-         "a arquitetura, as escolhas técnicas com prós e contras, e o escopo do MVP.")
+         "implementação atual de um RAG por paciente evoluído para um fluxo agentic, "
+         "com orquestração no backend, recuperação vetorial, ferramentas de "
+         "agendamento, validação de evidência e um registro persistente de cada "
+         "execução para estudo e auditoria.")
 
 # ============================================================================
 # SLIDE 2 — Problema
@@ -349,10 +349,10 @@ header(s, "Solução", "Proposta do MVP: um CRM Dental com chat",
        "Centraliza os dados do paciente e os torna consultáveis em linguagem natural.")
 feats = [
     ("Cadastro de pacientes", "Dados demográficos e de contato centralizados.", "👤"),
-    ("Histórico clínico", "Procedimentos, queixas e evolução em um só lugar.", "📋"),
-    ("Agendamentos", "Gestão de consultas e acompanhamentos.", "📅"),
-    ("Upload de documentos", "PDFs, prontuários e anotações vinculados ao paciente.", "📎"),
-    ("Chat inteligente", "Consulta as informações em linguagem natural, com fontes.", "💬"),
+    ("Anamnese estruturada", "Alergias, medicações, histórico e consentimento em Postgres.", "📋"),
+    ("Agendamentos", "Status machine, auto-agendamento e aprovação pela clínica.", "📅"),
+    ("Documentos + ingestão", "PDF/TXT/JSON/HTML viram chunks indexados no ChromaDB.", "📎"),
+    ("Chat agentic", "Consulta evidências, usa ferramentas e mostra o trace da execução.", "💬"),
 ]
 cw = Inches(3.85); ch = Inches(1.65); gx = Inches(0.22); gy = Inches(0.22)
 positions = [(0,0),(1,0),(2,0),(0,1),(1,1)]
@@ -371,10 +371,10 @@ r2.text = "O chat com Agentic RAG conecta tudo isso."
 r2.font.size = Pt(12.5); r2.font.color.rgb = CARD_ALT; r2.font.name = FONT
 footer(s, 3)
 notes(s, "A proposta é um CRM Dental enxuto, mas completo no essencial: cadastro de "
-         "pacientes, histórico clínico, agendamentos e upload de documentos. O "
-         "diferencial é o chat inteligente, que permite consultar todas essas "
-         "informações em linguagem natural e devolve respostas com as fontes. "
-         "É esse chat que evoluímos para Agentic RAG.")
+         "pacientes, anamnese estruturada, agendamentos, documentos e ingestão RAG. "
+         "O diferencial atual é o chat agentic: além de consultar informações em "
+         "linguagem natural, ele pode usar ferramentas de agendamento e expõe o curso "
+         "de ações em um registro persistido para estudo.")
 
 # ============================================================================
 # SLIDE 4 — RAG tradicional (fluxo)
@@ -447,12 +447,12 @@ s = slide(); bg(s, BG_LIGHT)
 header(s, "Evolução", "De RAG para Agentic RAG",
        "Agentes especializados que planejam, decidem e cooperam.")
 agents = [
-    ("Orquestrador", "Decide os próximos passos", "🧭", TEAL),
-    ("Recuperação", "Busca documentos relevantes", "🔎", CYAN),
-    ("Banco de dados", "Consulta dados estruturados", "🗄", TEAL),
-    ("Avaliador", "Valida a relevância", "✔", CYAN),
-    ("Sintetizador", "Gera a resposta final", "✍", TEAL),
-    ("Ferramentas", "Chama calendário / APIs", "🛠", CYAN),
+    ("Orquestrador", "Controla a máquina de estados", "🧭", TEAL),
+    ("Roteador", "Classifica intenção e custo esperado", "🧠", CYAN),
+    ("Planner/Rewriter", "Decompõe e normaliza consultas", "🧩", TEAL),
+    ("Retriever", "Combina ChromaDB e fallback Postgres", "🔎", CYAN),
+    ("Evaluator/Verifier", "Avalia contexto e fundamentação", "✔", TEAL),
+    ("Tool Registry", "Executa ações com preview → commit", "🛠", CYAN),
 ]
 cw = Inches(3.85); ch = Inches(1.5); gx = Inches(0.22); gy = Inches(0.20)
 x0 = Inches(0.6); y0 = Inches(2.35)
@@ -460,19 +460,20 @@ for i, (t, d, ic, col) in enumerate(agents):
     cx = i % 3; cy = i // 3
     card(s, x0 + cx*(cw+gx), y0 + cy*(ch+gy), cw, ch, t, d, accent=col, icon=ic)
 footer(s, 6)
-notes(s, "Na evolução para Agentic RAG, o chat deixa de ser um pipeline fixo e passa "
-         "a contar com agentes especializados. O Orquestrador decide os próximos "
-         "passos; o agente de Recuperação busca documentos; o agente de Banco de "
-         "Dados consulta dados estruturados; o Avaliador valida a relevância do que "
-         "foi recuperado; o Sintetizador gera a resposta; e o agente de Ferramentas "
-         "executa ações como consultar o calendário. Cada um faz uma coisa bem feita.")
+notes(s, "Na implementação atual, Agentic RAG não significa agentes autônomos soltos. "
+         "Significa um conjunto de serviços especializados coordenados por uma "
+         "máquina de estados determinística no NestJS. O roteador classifica a "
+         "intenção, o planner e o rewriter preparam consultas, o retriever combina "
+         "ChromaDB com fallback Postgres, o evaluator e o verifier controlam a "
+         "qualidade da evidência, e o Tool Registry executa ações somente com "
+         "confirmação humana.")
 
 # ============================================================================
 # SLIDE 7 — Arquitetura geral
 # ============================================================================
 s = slide(); bg(s, BG_LIGHT)
 header(s, "Arquitetura", "Visão geral da arquitetura",
-       "Frontend → API → Orquestrador de Agentes → Fontes de dados → Resposta.")
+       "Frontend → API NestJS → Orquestrador → RAG primitives / Postgres → Resposta.")
 
 def archbox(x, y, w, h, title, sub, color, tcolor=WHITE):
     b = rect(s, x, y, w, h, color, rounded=True, shadow=True)
@@ -488,14 +489,14 @@ def archbox(x, y, w, h, title, sub, color, tcolor=WHITE):
     return b
 
 yc = Inches(2.55)
-fbox = archbox(Inches(0.6), yc, Inches(2.05), Inches(1.1), "Frontend", "Next.js", CYAN, NAVY)
+fbox = archbox(Inches(0.6), yc, Inches(2.05), Inches(1.1), "Frontend", "Next.js 16", CYAN, NAVY)
 abox = archbox(Inches(2.95), yc, Inches(2.05), Inches(1.1), "API Backend", "NestJS", TEAL)
 obox = archbox(Inches(5.30), yc, Inches(2.45), Inches(1.1), "Orquestrador\nde Agentes", "máquina de estados", TEAL_DK)
 connector(s, Inches(2.65), yc + Inches(0.55), Inches(2.95), yc + Inches(0.55))
 connector(s, Inches(5.00), yc + Inches(0.55), Inches(5.30), yc + Inches(0.55))
 # data sources column
-srcs = [("Vector DB", "pgvector / Qdrant"), ("PostgreSQL", "dados clínicos"),
-        ("Storage", "documentos / PDFs"), ("Calendar API", "agendamentos")]
+srcs = [("RAG service", "/retrieve /generate /evaluate"), ("ChromaDB", "chunks vetoriais"),
+        ("PostgreSQL", "dados + traces"), ("Ollama", "LLM + embeddings")]
 sx = Inches(8.55); sw = Inches(4.15); shh = Inches(0.78); sy0 = Inches(2.05); sgap = Inches(0.20)
 for i, (t, d) in enumerate(srcs):
     yy = sy0 + i*(shh+sgap)
@@ -508,27 +509,27 @@ connector(s, Inches(6.52), yc + Inches(1.1), Inches(6.52), Inches(5.05), color=G
 # stack legend
 txt(s, Inches(0.6), Inches(6.15), Inches(12), Inches(1.2),
     [P("Stack do MVP:  ", 12.5, TEAL, True) +
-     [("Next.js  ·  NestJS  ·  PostgreSQL  ·  pgvector/Qdrant/Redis Vector  ·  "
-       "LLM via Ollama (local) ou OpenAI/Claude  ·  Embeddings nomic-embed-text / bge / e5",
+     [("Next.js 16  ·  NestJS/Fastify  ·  PostgreSQL/Drizzle  ·  ChromaDB  ·  "
+       "Fastify RAG service  ·  Ollama local  ·  phi3:mini  ·  nomic-embed-text",
        12.5, SLATE, False, False)]], space_after=0)
 footer(s, 7)
 notes(s, "Esta é a visão geral. O Frontend em Next.js conversa com a API backend em "
-         "NestJS, que funciona como fronteira de segurança. A API chama o Orquestrador "
-         "de Agentes, implementado como uma máquina de estados determinística. O "
-         "orquestrador acessa as fontes de dados: banco vetorial (pgvector ou Qdrant), "
-         "PostgreSQL para dados estruturados, storage de documentos e a API de "
-         "calendário. A resposta volta ao usuário sempre acompanhada das fontes. "
-         "A stack pode usar LLM local via Ollama ou serviços como OpenAI/Claude.")
+         "NestJS, que funciona como fronteira de segurança: autentica, resolve a "
+         "clínica ativa e fixa o escopo do paciente. Dentro da API, o Orquestrador de "
+         "Agentes controla a execução. Ele chama o serviço RAG por endpoints "
+         "primitivos, consulta Postgres para dados estruturados e traces, usa ChromaDB "
+         "como índice vetorial e Ollama para embeddings e geração. A resposta volta "
+         "por SSE com fontes, métricas e o identificador do agent_run.")
 
 # ============================================================================
 # SLIDE 8 — Fluxo de ingestão
 # ============================================================================
 s = slide(); bg(s, BG_LIGHT)
-header(s, "Pipeline", "Fluxo de ingestão dos documentos",
+header(s, "Pipeline", "Fluxo de ingestão dos documentos e anamneses",
        "Como prontuários e anotações viram conhecimento pesquisável.")
-ing = [("PDFs &\nanotações", "📄", CYAN), ("Parser", "🔧", TEAL),
-       ("Limpeza", "🧹", TEAL), ("Chunking", "✂", TEAL),
-       ("Embeddings", "🔢", TEAL_DK), ("Vector DB", "🗃", GREEN)]
+ing = [("Upload ou\nsnapshot", "📄", CYAN), ("API valida\nescopo", "🔐", TEAL),
+       ("Parser", "🔧", TEAL), ("Chunking", "✂", TEAL),
+       ("Embeddings", "🔢", TEAL_DK), ("ChromaDB", "🗃", GREEN)]
 n = len(ing); bw = Inches(1.78); bh = Inches(1.3); y = Inches(2.85)
 total = n*bw + (n-1)*Inches(0.27); x0 = (SW-total)/2
 for i, (t, ic, col) in enumerate(ing):
@@ -550,18 +551,17 @@ tf.margin_left = Inches(0.3)
 p = tf.paragraphs[0]; r = p.add_run(); r.text = "🗄  Metadados no PostgreSQL"
 r.font.size = Pt(13.5); r.font.bold = True; r.font.color.rgb = TEAL_DK; r.font.name = FONT
 p2 = tf.add_paragraph(); r2 = p2.add_run()
-r2.text = "paciente, tipo de documento, versão e referência do chunk — garantem isolamento e rastreabilidade."
+r2.text = "patient_documents, anamneses, document_versions e status de ingestão preservam a fonte autoritativa."
 r2.font.size = Pt(12); r2.font.color.rgb = SLATE; r2.font.name = FONT
 connector(s, Inches(x0 + 5*(bw+Inches(0.27)) + bw/2), y+bh, Inches(6.6), Inches(4.7),
           color=SLATE_LT, width=Pt(1.5))
 footer(s, 8)
-notes(s, "O fluxo de ingestão prepara os dados para a busca. Documentos como PDFs e "
-         "anotações passam por um parser que extrai o texto; em seguida vem a limpeza; "
-         "o chunking divide o texto em pedaços; cada pedaço é convertido em embeddings; "
-         "e tudo é armazenado no banco vetorial. Em paralelo, gravamos metadados no "
-         "PostgreSQL — identificador do paciente, tipo de documento, versão e "
-         "referência do chunk — o que garante o isolamento por paciente e a "
-         "rastreabilidade das fontes.")
+notes(s, "A ingestão começa no backend, não no serviço RAG. A API valida o usuário, a "
+         "clínica e o paciente, grava o arquivo ou snapshot de anamnese, cria o estado "
+         "de ingestão e só então chama o RAG. O RAG parseia, faz chunking, gera "
+         "embeddings com Ollama e grava no ChromaDB com metadados do paciente e da "
+         "fonte. O Postgres continua sendo a fonte autoritativa: documentos, "
+         "anamneses, versões e status ficam lá.")
 
 # ============================================================================
 # SLIDE 9 — Fluxo de pergunta no chat
@@ -576,11 +576,11 @@ p = tf.paragraphs[0]; r = p.add_run()
 r.text = "“Qual foi a última queixa de dor do paciente João?”"
 r.font.size = Pt(15); r.font.italic = True; r.font.color.rgb = WHITE; r.font.name = FONT
 flow = [
-    ("Orquestrador", "recebe e roteia a intenção", "🧭"),
-    ("Identifica paciente", "resolve o paciente “João”", "👤"),
-    ("Busca no banco", "consulta dados + recupera notas", "🗄"),
-    ("Avalia evidência", "verifica se o contexto basta", "✔"),
-    ("Gera resposta", "com as fontes citadas", "✍"),
+    ("Sessão validada", "JWT + X-Clinic-Id + patientId", "🔐"),
+    ("IntentRouter", "classifica knowledge_base_search", "🧭"),
+    ("Planner/Rewriter", "gera consultas normalizadas", "🧩"),
+    ("RetrieverTool", "ChromaDB + Postgres fallback", "🔎"),
+    ("Evaluate/Verify", "contexto suficiente + groundedness", "✔"),
 ]
 y0 = Inches(2.75); rh = Inches(0.78); gap = Inches(0.12); x = Inches(0.6); w = Inches(8.0)
 for i, (t, d, ic) in enumerate(flow):
@@ -609,16 +609,15 @@ r2.text = ("“A última queixa de dor de João foi em 12/03, dor no molar infer
            "direito, registrada na anamnese.”")
 r2.font.size = Pt(13); r2.font.color.rgb = WHITE; r2.font.name = FONT
 p3 = tf.add_paragraph(); p3.space_before = Pt(12); r3 = p3.add_run()
-r3.text = "Fontes: Anamnese 12/03 · Evolução clínica"
+r3.text = "Fontes + métricas + agentRunId para inspecionar o trace"
 r3.font.size = Pt(11); r3.font.italic = True; r3.font.color.rgb = CARD_ALT; r3.font.name = FONT
 footer(s, 9)
-notes(s, "Vamos a um exemplo concreto: alguém pergunta qual foi a última queixa de dor "
-         "do paciente João. O Orquestrador recebe e roteia a intenção. Primeiro "
-         "identifica de qual paciente estamos falando. Depois busca no banco — tanto "
-         "dados estruturados quanto as notas clínicas. O Avaliador verifica se o "
-         "contexto recuperado é suficiente; se não for, há nova tentativa. Por fim, o "
-         "sistema gera a resposta citando as fontes. Note que toda resposta vem com a "
-         "origem da informação, o que aumenta a confiança e a explicabilidade.")
+notes(s, "No fluxo atual, o paciente não é escolhido pelo LLM: ele já está preso à "
+         "sessão de chat validada pela API. A pergunta entra no endpoint agentic, o "
+         "roteador classifica a intenção, o planner e o rewriter preparam consultas, "
+         "o RetrieverTool busca no ChromaDB e pode complementar com Postgres, e o "
+         "evaluator/verifier controlam contexto e fundamentação. A UI recebe tokens, "
+         "fontes, métricas e o agentRunId, que permite abrir o trace completo.")
 
 # ============================================================================
 # SLIDE 10 — Agentes do sistema (tabela)
@@ -627,24 +626,25 @@ s = slide(); bg(s, BG_LIGHT)
 header(s, "Componentes", "Os agentes do sistema",
        "Cada agente tem uma responsabilidade única e bem definida.")
 rows = [
-    ["🧭  Orquestrador", "Decide os próximos passos e coordena o fluxo"],
-    ["🔎  Retriever Agent", "Busca documentos relevantes no banco vetorial"],
-    ["🗄  SQL Agent", "Consulta dados estruturados no PostgreSQL"],
-    ["✔  Evaluator Agent", "Valida a relevância do contexto recuperado"],
-    ["🛠  Tool Agent", "Chama o calendário e APIs externas"],
-    ["✍  Answer Agent", "Gera a resposta final com fontes"],
+    ["🧭  AgentOrchestrator", "Coordena a máquina de estados, orçamento e fallbacks"],
+    ["🧠  IntentRouter", "Classifica direct_answer, RAG, multi-step, action_request ou unsupported"],
+    ["🧩  QueryPlanner/Rewriter", "Decompõe a pergunta e gera consultas normalizadas"],
+    ["🔎  RetrieverTool", "Consulta /v1/retrieve e pode usar Postgres como fallback/suplemento"],
+    ["✔  ContextEvaluator", "Decide suficiência e sugere retry no loop CRAG"],
+    ["✍  AnswerGenerator", "Gera resposta streamada com contexto recuperado"],
+    ["🛡  AnswerVerifier", "Verifica groundedness e pode fazer downgrade seguro"],
+    ["🗄  AgentTracing", "Persiste runs, steps, chunks, tools e avaliações"],
 ]
 table(s, Inches(0.6), Inches(2.35), Inches(12.1),
       ["Agente", "Responsabilidade"], rows,
-      col_widths=[Inches(3.5), Inches(8.6)], row_h=Inches(0.62))
+      col_widths=[Inches(3.5), Inches(8.6)], row_h=Inches(0.46), fs=11.5, head_fs=12.5)
 footer(s, 10)
-notes(s, "Resumindo os papéis: o Orquestrador decide os próximos passos e coordena "
-         "tudo. O Retriever Agent busca documentos no banco vetorial. O SQL Agent "
-         "consulta dados estruturados no PostgreSQL. O Evaluator Agent valida se o "
-         "contexto recuperado é relevante. O Tool Agent executa ações externas, como "
-         "consultar o calendário. E o Answer Agent gera a resposta final com as fontes. "
-         "Essa separação de responsabilidades é o que dá modularidade e controle ao "
-         "sistema.")
+notes(s, "Esta tabela troca nomes genéricos por componentes reais do código. O "
+         "AgentOrchestrator coordena a máquina de estados; o IntentRouter classifica "
+         "a intenção; planner e rewriter estruturam as consultas; RetrieverTool chama "
+         "o RAG e pode usar Postgres; ContextEvaluator decide se o contexto basta; "
+         "AnswerGenerator gera a resposta; AnswerVerifier verifica groundedness; e "
+         "AgentTracing persiste tudo para inspeção.")
 
 # ============================================================================
 # SLIDE 11 — Como o agente foi elaborado (anatomia do módulo)
@@ -657,31 +657,29 @@ rows = [
     ["orchestrator/", "AgentOrchestrator", "Máquina de estados / loop de controle"],
     ["router/", "IntentRouterService", "Classifica a intenção em 6 classes + confiança"],
     ["planner/", "QueryRewriter · QueryPlanner", "Normaliza, expande e decompõe a pergunta"],
-    ["tools/", "ToolRegistry · RetrieverTool", "Ferramentas tipadas e permissionadas (DI)"],
+    ["tools/", "ToolRegistry · RetrieverTool", "RAG, Postgres fallback e ações tipadas"],
     ["evaluators/", "ContextEvaluatorService", "Decide se o contexto recuperado é suficiente"],
     ["generators/", "AnswerGeneratorService", "Geração streamada (SSE) com citações inline"],
     ["verifiers/", "AnswerVerifierService", "Checa fundamentação (groundedness) das claims"],
-    ["guardrails/", "SanitizerService", "Anti-prompt-injection + escopo de dados"],
+    ["tracing/", "AgentTracingService", "Registra runs, steps, chunks, tools e evaluations"],
+    ["memory/", "MemoryService", "Resumo da sessão para contexto futuro"],
 ]
 table(s, Inches(0.6), Inches(2.2), Inches(12.1),
       ["Módulo (src/agent)", "Service (agente)", "Papel técnico"], rows,
       col_widths=[Inches(2.9), Inches(3.9), Inches(5.3)],
-      row_h=Inches(0.52), fs=12, head_fs=12.5)
+      row_h=Inches(0.46), fs=11.4, head_fs=12.5)
 txt(s, Inches(0.6), Inches(6.5), Inches(12), Inches(0.6),
     [P("Princípio: ", 12.5, TEAL, True) +
      [("responsabilidade única por agente + injeção de dependência + feature flags "
        "para ligar/desligar cada capacidade de forma incremental.",
        12.5, SLATE, False, False)]], space_after=0)
 footer(s, 11)
-notes(s, "Tecnicamente, o agente não é um único bloco monolítico: é um módulo NestJS em "
-         "src/agent onde cada responsabilidade vira um service injetável. O "
-         "AgentOrchestrator é a máquina de estados que coordena tudo. O IntentRouter "
-         "classifica a intenção; o planner reescreve e decompõe a pergunta; o "
-         "ToolRegistry expõe ferramentas tipadas e permissionadas; o ContextEvaluator "
-         "decide se o contexto basta; o AnswerGenerator gera a resposta com citações; "
-         "o AnswerVerifier valida a fundamentação; e o Sanitizer protege contra "
-         "prompt injection. A injeção de dependência e as feature flags permitem ligar "
-         "cada capacidade de forma incremental, sem reescrever o orquestrador.")
+notes(s, "Tecnicamente, o agente é um módulo NestJS com serviços injetáveis. A parte "
+         "importante para estudar é que o orquestrador não mistura responsabilidades: "
+         "roteamento, planejamento, reescrita, recuperação, avaliação, geração, "
+         "verificação, ferramentas, tracing e memória são componentes separados. Isso "
+         "facilita testes, troca de modelos, feature flags e inspeção acadêmica do "
+         "comportamento.")
 
 # ============================================================================
 # SLIDE 12 — O loop de orquestração + orçamento
@@ -749,11 +747,11 @@ header(s, "Confiabilidade", "Fundamentação, validação e segurança",
        "Os mecanismos técnicos que tornam a resposta confiável e o sistema seguro.")
 mech = [
     ("ContextEvaluator", "Retorna { sufficient, missing[], suggestedQuery } e dispara o loop corretivo.", "✔", TEAL),
-    ("AnswerVerifier", "Groundedness por similaridade, exige ≥1 citação e remove claims sem suporte.", "🛡", TEAL),
-    ("Métricas RAG-Triad", "Context relevance · groundedness · answer relevance por resposta.", "📊", CYAN),
+    ("AnswerVerifier", "Groundedness + citações; pode fazer downgrade para evidência insuficiente.", "🛡", TEAL),
+    ("RAG-Triad", "Context relevance · groundedness · answer relevance persistidos no chat.", "📊", CYAN),
     ("Trust boundary", "JWT → ClinicScope → PatientScope: isolamento por clínica e paciente.", "🔐", TEAL_DK),
-    ("Sanitizer", "Neutraliza padrões de prompt injection antes de chegar ao LLM.", "🧼", CYAN),
-    ("Preview → Commit", "Toda ação que altera dados exige confirmação humana explícita.", "🤝", TEAL),
+    ("Agent traces", "agent_runs, steps, chunks, tools e evaluations auditáveis no UI.", "🗄", CYAN),
+    ("Preview → Commit", "Toda ferramenta mutável exige confirmação humana explícita.", "🤝", TEAL),
 ]
 cw = Inches(3.85); ch = Inches(1.7); gx = Inches(0.22); gy = Inches(0.22)
 x0 = Inches(0.6); y0 = Inches(2.3)
@@ -761,16 +759,14 @@ for i, (t, d, ic, col) in enumerate(mech):
     cx = i % 3; cy = i // 3
     card(s, x0 + cx*(cw+gx), y0 + cy*(ch+gy), cw, ch, t, d, accent=col, icon=ic)
 footer(s, 13)
-notes(s, "Confiabilidade e segurança são tratadas como mecanismos concretos, não "
-         "promessas. O ContextEvaluator devolve uma estrutura tipada dizendo se o "
-         "contexto é suficiente, o que falta e qual query tentar — é o que alimenta o "
-         "loop corretivo. O AnswerVerifier mede a fundamentação por similaridade, "
-         "exige pelo menos uma citação e remove afirmações sem suporte. Medimos a "
-         "RAG-Triad: relevância do contexto, fundamentação e relevância da resposta. "
-         "A fronteira de confiança é a API NestJS, com guards encadeados de JWT, "
-         "escopo de clínica e de paciente, garantindo isolamento. O Sanitizer "
-         "neutraliza prompt injection antes do LLM. E qualquer ação que altere dados "
-         "passa por preview e confirmação humana antes do commit.")
+notes(s, "Confiabilidade e segurança são tratadas como mecanismos concretos. O "
+         "ContextEvaluator produz uma estrutura tipada para decidir se o contexto "
+         "basta. O AnswerVerifier controla groundedness e citações, e pode fazer "
+         "downgrade para evidência insuficiente. A RAG-Triad fica persistida por "
+         "mensagem. A fronteira de confiança é a API NestJS, com JWT, escopo de "
+         "clínica e escopo de paciente. Além disso, os traces ficam auditáveis no "
+         "Postgres e na UI. Por fim, qualquer ferramenta mutável passa por preview e "
+         "confirmação humana.")
 
 # ============================================================================
 # SLIDE 14 — Como o agente faz a diferença (técnico)
@@ -783,12 +779,14 @@ rows = [
      "Recall maior; contexto corrigido em runtime"],
     ["IntentRouter + Planner", "Não decompõe perguntas",
      "Perguntas multi-etapa são atendidas"],
+    ["RetrieverTool híbrido", "Só busca no vetor store",
+     "ChromaDB + Postgres fallback/suplemento"],
     ["ToolRegistry tipado", "Não usa ferramentas",
-     "Consulta SQL / calendário sob demanda"],
+     "Agendamentos via preview → commit"],
     ["Verifier + citações", "Não valida a resposta",
      "Menos alucinação; resposta rastreável"],
-    ["Orçamento + tracing", "Caixa-preta, custo solto",
-     "Latência/custo sob controle e auditáveis"],
+    ["Registro RAG no UI", "Caixa-preta, difícil estudar",
+     "Passo a passo auditável por execução"],
 ]
 cell_colors = {}
 for i in range(len(rows)):
@@ -804,16 +802,13 @@ txt(s, Inches(0.6), Inches(6.55), Inches(12), Inches(0.6),
        "valida e prova — com custo limitado e rastreável.",
        12.5, SLATE, False, False)]], space_after=0)
 footer(s, 14)
-notes(s, "Aqui fecho a parte técnica mostrando a diferença mecanismo a mecanismo. O "
-         "loop recuperar-avaliar resolve a recuperação única do RAG linear, elevando o "
-         "recall e corrigindo o contexto em tempo de execução. O roteador e o "
-         "planejador resolvem a ausência de decomposição, atendendo perguntas de "
-         "múltiplas etapas. O registro de ferramentas tipadas permite consultar o "
-         "banco ou o calendário sob demanda. O verificador com citações ataca a "
-         "alucinação e torna a resposta rastreável. E o orçamento com tracing tira o "
-         "sistema da caixa-preta, mantendo custo e latência sob controle e auditáveis. "
-         "Em resumo: trocamos um pipeline fixo por um controlador que planeja, "
-         "recupera, valida e comprova.")
+notes(s, "Aqui o ponto é mostrar diferença prática. O loop recuperar-avaliar dá uma "
+         "segunda chance ao contexto. O roteador e o planner permitem perguntas "
+         "multi-etapa. O RetrieverTool híbrido evita depender exclusivamente do vetor "
+         "store. O ToolRegistry habilita agendamentos com confirmação. O verifier e "
+         "as citações reduzem alucinação. E o registro RAG no UI transforma uma "
+         "resposta em objeto de estudo: dá para ver cada step, input, output, chunks, "
+         "scores, latência e fallback.")
 
 # ============================================================================
 # SLIDE 15 — Escolhas técnicas: prós e contras
@@ -823,17 +818,17 @@ header(s, "Decisões", "Escolhas técnicas: prós e contras",
        "Comparações que guiaram a stack do MVP acadêmico.")
 rows = [
     ["Banco vetorial",
-     "pgvector: simples, reusa o Postgres",
-     "Qdrant/Redis: mais escala, infra extra"],
+     "ChromaDB: simples, metadata filter, separado do domínio",
+     "pgvector: menos serviços, acopla vetores ao Postgres"],
     ["LLM",
-     "OpenAI/Claude: qualidade e facilidade",
-     "Ollama local: privacidade e custo zero"],
+     "Ollama local: privacidade e custo zero",
+     "OpenAI/Claude: mais qualidade, dependência externa"],
     ["Backend",
      "NestVJS: produtivo, ecossistema TS",
      "Go: performance, menos boilerplate ORM"],
     ["Abordagem",
-     "RAG simples: rápido e barato",
-     "Agentic RAG: robusto, porém complexo"],
+     "RAG legado: rápido e simples",
+     "Agentic RAG: auditável, robusto, mais complexo"],
 ]
 # fix typo
 rows[2][1] = "NestJS: produtivo, ecossistema TS/Node"
@@ -846,18 +841,18 @@ table(s, Inches(0.6), Inches(2.35), Inches(12.1),
       col_widths=[Inches(2.5), Inches(4.8), Inches(4.8)],
       row_h=Inches(0.82), cell_colors=cell_colors, fs=12, head_fs=12.5)
 txt(s, Inches(0.6), Inches(6.45), Inches(12), Inches(0.6),
-    [P("No MVP priorizamos simplicidade e privacidade: ", 12.5, TEAL, True) +
-     [("pgvector + Ollama local + NestJS, com Agentic RAG mínimo e flags para "
-       "ativar recursos gradualmente.", 12.5, SLATE, False, False)]], space_after=0)
+    [P("No estado atual: ", 12.5, TEAL, True) +
+     [("ChromaDB é índice derivado; Postgres é fonte autoritativa; Ollama mantém "
+       "execução local; Agentic RAG roda atrás de flags e budgets.",
+       12.5, SLATE, False, False)]], space_after=0)
 footer(s, 15)
-notes(s, "Toda escolha técnica tem trade-offs. Para o banco vetorial, pgvector é "
-         "simples e reaproveita o PostgreSQL, enquanto Qdrant ou Redis Vector escalam "
-         "melhor ao custo de infraestrutura extra. Para o LLM, serviços como OpenAI ou "
-         "Claude entregam qualidade com facilidade, mas Ollama local oferece "
-         "privacidade e custo zero — relevante para dados clínicos. No backend, NestJS "
-         "é produtivo no ecossistema TypeScript, e Go entrega mais performance. E a "
-         "abordagem em si: RAG simples é rápido e barato; Agentic RAG é mais robusto, "
-         "porém mais complexo. No MVP, optamos por pgvector, Ollama local e NestJS.")
+notes(s, "Aqui eu atualizo as decisões para o estado real do projeto. O banco vetorial "
+         "é ChromaDB, escolhido por simplicidade e filtro por metadados. Postgres "
+         "continua sendo a fonte autoritativa. Ollama mantém modelos locais, o que "
+         "favorece privacidade e custo zero em ambiente acadêmico. NestJS concentra a "
+         "fronteira de segurança e a orquestração. O RAG legado continua existindo, "
+         "mas o Agentic RAG entrega mais auditoria e robustez ao custo de mais "
+         "complexidade.")
 
 # ============================================================================
 # SLIDE 16 — Vantagens do Agentic RAG
@@ -869,8 +864,8 @@ adv = [
     ("Melhor recuperação", "Busca iterativa e corretiva do contexto.", "🎯"),
     ("Múltiplas etapas", "Decompõe perguntas complexas em passos.", "🧩"),
     ("Menos alucinação", "Validação de evidência antes de responder.", "🛡"),
-    ("Ferramentas dinâmicas", "Escolhe banco, calendário ou API conforme a tarefa.", "🛠"),
-    ("Explicabilidade", "Mostra o raciocínio e cita as fontes.", "🔍"),
+    ("Ferramentas dinâmicas", "Executa ações de agenda com confirmação humana.", "🛠"),
+    ("Explicabilidade", "Mostra steps, métricas, chunks e fontes.", "🔍"),
     ("Tarefas complexas", "Adequado a fluxos de trabalho reais da clínica.", "⚙"),
 ]
 cw = Inches(3.85); ch = Inches(1.5); gx = Inches(0.22); gy = Inches(0.20)
@@ -882,9 +877,9 @@ footer(s, 16)
 notes(s, "As vantagens do Agentic RAG vêm justamente de superar as limitações do RAG "
          "tradicional. A recuperação melhora porque é iterativa e corretiva. O sistema "
          "lida com perguntas de múltiplas etapas. A validação de evidência reduz "
-         "alucinações. A escolha dinâmica de ferramentas permite consultar o banco ou "
-         "o calendário conforme a necessidade. A explicabilidade aumenta porque o "
-         "sistema mostra o raciocínio e cita fontes. No conjunto, fica muito mais "
+         "alucinações. A escolha dinâmica de ferramentas permite executar ações de "
+         "agendamento com confirmação humana. A explicabilidade aumenta porque o "
+         "sistema mostra steps, métricas, chunks e fontes. No conjunto, fica muito mais "
          "adequado a tarefas reais e complexas de uma clínica.")
 
 # ============================================================================
@@ -897,7 +892,7 @@ risks = [
     ("Maior complexidade", "Mais componentes para construir e manter.", "🧱"),
     ("Mais custo de tokens", "Múltiplas chamadas ao LLM por pergunta.", "💸"),
     ("Maior latência", "Etapas extras aumentam o tempo de resposta.", "⏱"),
-    ("Observabilidade difícil", "Rastrear decisões de vários agentes é complexo.", "📉"),
+    ("PII em traces", "Payloads brutos exigem política de redação em produção.", "📉"),
     ("Controle de permissões", "Isolar dados por paciente é obrigatório.", "🔐"),
     ("Ações indevidas", "Risco de agentes agirem sem confirmação.", "🚫"),
 ]
@@ -909,12 +904,12 @@ for i, (t, d, ic) in enumerate(risks):
 footer(s, 17)
 notes(s, "É preciso ser honesto sobre os riscos. O Agentic RAG é mais complexo de "
          "construir e manter. Cada pergunta pode gerar várias chamadas ao LLM, "
-         "elevando custo de tokens e latência. A observabilidade fica mais difícil, "
-         "pois há decisões de múltiplos agentes para rastrear. Como lidamos com dados "
-         "clínicos, o controle de permissões e o isolamento por paciente são "
-         "obrigatórios. E há o risco de um agente executar ações indevidas — por isso "
-         "adotamos confirmação humana (preview → commit) para qualquer ação que "
-         "altere dados.")
+         "elevando custo de tokens e latência. Como os traces armazenam dados úteis "
+         "para estudo, em produção seria necessário redigir PII com mais rigor. Como "
+         "lidamos com dados clínicos, o controle de permissões e o isolamento por "
+         "paciente são obrigatórios. E há o risco de um agente executar ações "
+         "indevidas — por isso adotamos confirmação humana (preview → commit) para "
+         "qualquer ação que altere dados.")
 
 # ============================================================================
 # SLIDE 18 — Escopo do MVP
@@ -929,11 +924,11 @@ txt(s, Inches(0.9), Inches(2.42), Inches(5.4), Inches(0.4),
     [P("✅  Incluído no MVP", 16, WHITE, True)], space_after=0)
 bullets(s, Inches(0.95), Inches(3.15), Inches(5.3), [
     "Cadastro de pacientes",
-    "Histórico clínico textual",
-    "Chat com RAG",
-    "Busca semântica",
-    "Orquestrador simples",
-    "Avaliação de resposta",
+    "Anamnese e documentos",
+    "Chat com Agentic RAG",
+    "Busca ChromaDB + Postgres",
+    "Ferramentas de agenda",
+    "Registro RAG inspecionável",
 ], size=14.5, gap=12, marker_color=GREEN)
 # Out panel
 out = rect(s, Inches(6.78), Inches(2.3), Inches(5.95), Inches(4.4), CARD, rounded=True, shadow=True)
@@ -945,15 +940,17 @@ bullets(s, Inches(7.13), Inches(3.15), Inches(5.3), [
     "Diagnóstico médico automatizado",
     "Ações automáticas sem confirmação",
     "Treinamento próprio de LLM",
+    "Política completa de LGPD/produção",
 ], size=14.5, gap=14, marker_color=RED)
 footer(s, 18)
 notes(s, "Delimitar o escopo é essencial num trabalho acadêmico. Entram no MVP: "
-         "cadastro de pacientes, histórico clínico textual, o chat com RAG, busca "
-         "semântica, um orquestrador simples e a avaliação de resposta. Ficam "
-         "deliberadamente de fora: integração real com sistemas hospitalares, "
-         "qualquer diagnóstico médico automatizado, ações automáticas sem confirmação "
-         "humana e o treinamento próprio de um LLM. Esses limites mantêm o projeto "
-         "viável e eticamente responsável.")
+         "cadastro de pacientes, anamnese, documentos, chat com Agentic RAG, busca "
+         "semântica em ChromaDB combinada com Postgres, ferramentas de agenda e o "
+         "registro RAG inspecionável. Ficam deliberadamente de fora: integração real "
+         "com sistemas hospitalares, diagnóstico médico automatizado, ações sem "
+         "confirmação humana, treinamento próprio de LLM e uma política completa de "
+         "produção/LGPD. Esses limites mantêm o projeto viável e eticamente "
+         "responsável.")
 
 # ============================================================================
 # SLIDE 19 — Conclusão
@@ -970,10 +967,10 @@ txt(s, Inches(0.86), Inches(2.0), Inches(11.5), Inches(2.6),
      [("busca", 32, CYAN, True, False)] +
      [(" — ele ", 32, WHITE, True, False)] +
      [("planeja, valida, usa ferramentas", 32, CYAN, True, False)],
-     P("e produz respostas mais confiáveis.", 32, WHITE, True)],
+     P("e deixa sua execução auditável.", 32, WHITE, True)],
     space_after=4, line_spacing=1.05)
 # takeaways row
-tks = ["Planeja a tarefa", "Valida a evidência", "Usa ferramentas", "Cita as fontes"]
+tks = ["Planeja a tarefa", "Valida evidência", "Usa ferramentas", "Registra o trace"]
 bw = Inches(2.85); gap = Inches(0.25); x0 = Inches(0.9); y = Inches(5.55)
 for i, t in enumerate(tks):
     pill(s, x0 + i*(bw+gap), y, bw, Inches(0.85), t,
@@ -981,9 +978,9 @@ for i, t in enumerate(tks):
 notes(s, "Para concluir: o Agentic RAG torna o CRM Dental mais inteligente porque "
          "muda a natureza do sistema. Ele deixa de apenas buscar informação e passa a "
          "planejar a tarefa, validar a evidência, usar ferramentas quando necessário e "
-         "produzir respostas mais confiáveis e fundamentadas. Para um contexto clínico, "
-         "onde confiança e rastreabilidade são críticas, essa evolução faz diferença "
-         "real — mesmo num MVP acadêmico.")
+         "registrar sua própria execução. Para um contexto clínico e acadêmico, onde "
+         "confiança, rastreabilidade e estudo técnico são críticos, essa evolução faz "
+         "diferença real — mesmo num MVP.")
 
 # ============================================================================
 # SLIDE 20 — Perguntas?

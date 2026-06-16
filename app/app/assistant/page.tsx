@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { Fragment, useEffect, useRef, useState } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { TopNav } from "@/components/top-nav"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
@@ -9,13 +9,22 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sparkles, Send, AlertCircle, Loader2 } from "lucide-react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Sparkles, Send, AlertCircle, Loader2, RefreshCw, ChevronDown, ChevronRight } from "lucide-react"
 import {
   agentApi,
   chatApi,
   documentsApi,
   patientsApi,
   streamChat,
+  type AgentRunRegistryItem,
   type AgentRunTrace,
   type ChatActionPayload,
   type ChatActionResult,
@@ -70,6 +79,143 @@ interface AgentDebugState {
   steps?: AgentStepEvent[]
 }
 
+const STEP_LABELS: Record<string, string> = {
+  intent: "Classificar intenção",
+  plan: "Planejar execução",
+  rewrite: "Reescrever consulta",
+  retrieve: "Recuperar evidências",
+  evaluate: "Avaliar contexto",
+  tool: "Executar ferramenta",
+  generate: "Gerar resposta",
+  verify: "Verificar resposta",
+  fallback: "Fallback",
+  error: "Erro",
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+function shortId(id: string): string {
+  return id.slice(0, 8)
+}
+
+function formatDateTime(value?: string | null): string {
+  if (!value) return "Sem data"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "Sem data"
+  return date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
+function formatDuration(ms?: number | null): string {
+  if (typeof ms !== "number") return "n/a"
+  if (ms < 1000) return `${ms} ms`
+  return `${(ms / 1000).toFixed(1)} s`
+}
+
+function stepLabel(type: string): string {
+  return STEP_LABELS[type] ?? type
+}
+
+function runStatus(run: AgentRunRegistryItem): {
+  label: string
+  variant: "default" | "secondary" | "destructive" | "outline"
+} {
+  if (run.run.error) return { label: "erro", variant: "destructive" }
+  if (run.run.insufficientEvidence) return { label: "sem evidência", variant: "outline" }
+  if (run.run.fallbackUsed) return { label: "fallback", variant: "secondary" }
+  return { label: "ok", variant: "default" }
+}
+
+function summarizeStep(step: AgentRunRegistryItem["steps"][number]): string {
+  const output = asRecord(step.output)
+  const input = asRecord(step.input)
+  const error = asRecord(step.error)
+
+  if (error) {
+    return String(error.message ?? error.code ?? "erro registrado")
+  }
+
+  if (step.type === "intent") {
+    const intent = typeof output?.intent === "string" ? output.intent : null
+    const reason = typeof output?.reason === "string" ? output.reason : null
+    return [intent, reason].filter(Boolean).join(" · ") || "intenção registrada"
+  }
+
+  if (step.type === "plan") {
+    const steps = Array.isArray(output?.steps) ? output.steps.length : null
+    return steps ? `${steps} etapa(s) planejada(s)` : "plano registrado"
+  }
+
+  if (step.type === "rewrite") {
+    const queries = Array.isArray(output?.queries)
+      ? output.queries.filter((query): query is string => typeof query === "string")
+      : []
+    return queries.length > 0 ? queries.join(" | ") : "consulta mantida"
+  }
+
+  if (step.type === "retrieve") {
+    const count = typeof output?.count === "number" ? output.count : null
+    const retriever =
+      typeof output?.retriever === "string"
+        ? output.retriever
+        : typeof input?.retriever === "string"
+          ? input.retriever
+          : null
+    return [count != null ? `${count} trecho(s)` : null, retriever]
+      .filter(Boolean)
+      .join(" · ") || "recuperação registrada"
+  }
+
+  if (step.type === "evaluate") {
+    const sufficient =
+      typeof output?.sufficient === "boolean"
+        ? output.sufficient
+          ? "suficiente"
+          : "insuficiente"
+        : null
+    const score = typeof output?.score === "number" ? formatScorePct(output.score) : null
+    return [sufficient, score].filter(Boolean).join(" · ") || "avaliação registrada"
+  }
+
+  if (step.type === "tool") {
+    const kind = typeof output?.kind === "string" ? output.kind : null
+    const tool = typeof output?.tool === "string" ? output.tool : null
+    const mode = typeof output?.mode === "string" ? output.mode : null
+    return [tool ?? kind, mode].filter(Boolean).join(" · ") || "ferramenta registrada"
+  }
+
+  if (step.type === "generate") {
+    const chars = typeof output?.chars === "number" ? `${output.chars} caractere(s)` : null
+    const provider = typeof output?.provider === "string" ? output.provider : null
+    return [chars, provider].filter(Boolean).join(" · ") || "resposta gerada"
+  }
+
+  if (step.type === "verify") {
+    const faithful =
+      typeof output?.faithful === "boolean"
+        ? output.faithful
+          ? "fiel"
+          : "não fiel"
+        : null
+    const action = typeof output?.action === "string" ? output.action : null
+    return [faithful, action].filter(Boolean).join(" · ") || "verificação registrada"
+  }
+
+  if (step.type === "fallback") {
+    return typeof output?.reason === "string" ? output.reason : "fallback registrado"
+  }
+
+  return "etapa registrada"
+}
+
 export default function AssistantPage() {
   return (
     <AuthGate>
@@ -85,6 +231,10 @@ function AssistantPageInner() {
   const [docs, setDocs] = useState<PatientDocument[] | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<UiMessage[]>([])
+  const [runRegistry, setRunRegistry] = useState<AgentRunRegistryItem[]>([])
+  const [expandedRunId, setExpandedRunId] = useState<string | null>(null)
+  const [registryLoading, setRegistryLoading] = useState(false)
+  const [registryError, setRegistryError] = useState<string | null>(null)
   const [input, setInput] = useState("")
   const [streaming, setStreaming] = useState(false)
   const [ragOk, setRagOk] = useState<boolean | null>(null)
@@ -120,6 +270,9 @@ function AssistantPageInner() {
     setMessages([])
     setError(null)
     setDocs(null)
+    setRunRegistry([])
+    setExpandedRunId(null)
+    setRegistryError(null)
     documentsApi
       .list(p.id)
       .then(setDocs)
@@ -131,6 +284,7 @@ function AssistantPageInner() {
       const existing = await chatApi.listSessions(p.id).catch(() => [])
       const session = existing[0] ?? (await chatApi.createSession(p.id))
       setSessionId(session.id)
+      void loadRunRegistry(session.id, { expandLatest: true })
       const past = await chatApi.listMessages(session.id)
       setMessages(
         past.map((m: ChatMessage) => {
@@ -243,6 +397,7 @@ function AssistantPageInner() {
         if (done?.agentRunId) {
           void loadAgentTrace(assistantId, done.agentRunId)
         }
+        void loadRunRegistry(sessionId, { expandLatest: true })
         setMessages((m) =>
           m.map((msg) =>
             msg.id === assistantId
@@ -388,6 +543,26 @@ function AssistantPageInner() {
             : msg,
         ),
       )
+    }
+  }
+
+  async function loadRunRegistry(
+    targetSessionId = sessionId,
+    options: { expandLatest?: boolean } = {},
+  ) {
+    if (!targetSessionId) return
+    setRegistryLoading(true)
+    setRegistryError(null)
+    try {
+      const runs = await agentApi.listRuns({ sessionId: targetSessionId, limit: 20 })
+      setRunRegistry(runs)
+      if (options.expandLatest) {
+        setExpandedRunId(runs[0]?.run.id ?? null)
+      }
+    } catch (err) {
+      setRegistryError(errorMessage(err))
+    } finally {
+      setRegistryLoading(false)
     }
   }
 
@@ -845,6 +1020,241 @@ function AssistantPageInner() {
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+              <div>
+                <CardTitle className="text-base">Registro RAG</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Curso de ações persistido pela orquestração do agente.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadRunRegistry()}
+                disabled={!sessionId || registryLoading}
+              >
+                <RefreshCw
+                  className={`w-4 h-4 mr-2 ${registryLoading ? "animate-spin" : ""}`}
+                />
+                Atualizar
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!selected ? (
+                <div className="text-sm text-muted-foreground">
+                  Selecione um paciente para carregar o histórico RAG.
+                </div>
+              ) : registryError ? (
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <AlertCircle className="w-4 h-4" /> {registryError}
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10" />
+                        <TableHead>Execução</TableHead>
+                        <TableHead>Pergunta</TableHead>
+                        <TableHead>Intenção</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Etapas</TableHead>
+                        <TableHead>Evidências</TableHead>
+                        <TableHead>Duração</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {runRegistry.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={8}
+                            className="h-24 text-center text-sm text-muted-foreground"
+                          >
+                            {registryLoading
+                              ? "Carregando execuções..."
+                              : "Nenhuma execução RAG registrada para esta sessão."}
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        runRegistry.map((run) => {
+                          const status = runStatus(run)
+                          const isExpanded = expandedRunId === run.run.id
+                          const retrieveSteps = run.steps.filter(
+                            (step) => step.type === "retrieve",
+                          )
+                          const chunkByStep = new Map<string, number>()
+                          for (const chunk of run.chunks) {
+                            if (!chunk.stepId) continue
+                            chunkByStep.set(
+                              chunk.stepId,
+                              (chunkByStep.get(chunk.stepId) ?? 0) + 1,
+                            )
+                          }
+
+                          return (
+                            <Fragment key={run.run.id}>
+                              <TableRow>
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() =>
+                                      setExpandedRunId(isExpanded ? null : run.run.id)
+                                    }
+                                    aria-label={
+                                      isExpanded
+                                        ? "Recolher execução"
+                                        : "Expandir execução"
+                                    }
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap align-top">
+                                  <div className="font-mono text-xs">
+                                    {shortId(run.run.id)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {formatDateTime(run.run.createdAt)}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="min-w-[260px] max-w-[440px] align-top">
+                                  <div className="line-clamp-2 text-sm">
+                                    {run.run.question}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap align-top text-sm">
+                                  {run.run.intent ?? "n/a"}
+                                </TableCell>
+                                <TableCell className="align-top">
+                                  <Badge variant={status.variant}>{status.label}</Badge>
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap align-top text-sm">
+                                  {run.steps.length}
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap align-top text-sm">
+                                  {run.chunks.length}
+                                  {retrieveSteps.length > 1 ? (
+                                    <span className="text-xs text-muted-foreground">
+                                      {" "}
+                                      em {retrieveSteps.length} buscas
+                                    </span>
+                                  ) : null}
+                                </TableCell>
+                                <TableCell className="whitespace-nowrap align-top text-sm">
+                                  {formatDuration(run.run.totalLatencyMs)}
+                                </TableCell>
+                              </TableRow>
+                              {isExpanded ? (
+                                <TableRow>
+                                  <TableCell colSpan={8} className="bg-muted/30 p-4">
+                                    <div className="space-y-3">
+                                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                        {run.steps.map((step) => (
+                                          <div
+                                            key={step.id}
+                                            className="rounded-md border bg-background p-3"
+                                          >
+                                            <div className="flex items-start justify-between gap-2">
+                                              <div>
+                                                <div className="font-medium text-sm">
+                                                  {step.seq}. {stepLabel(step.type)}
+                                                </div>
+                                                <div className="mt-1 text-xs text-muted-foreground">
+                                                  {summarizeStep(step)}
+                                                </div>
+                                              </div>
+                                              <Badge variant="outline" className="text-[10px]">
+                                                {formatDuration(step.durationMs)}
+                                              </Badge>
+                                            </div>
+                                            <div className="mt-2 flex flex-wrap gap-1">
+                                              {step.model ? (
+                                                <Badge variant="secondary" className="text-[10px]">
+                                                  {step.model}
+                                                </Badge>
+                                              ) : null}
+                                              {step.tokensIn != null || step.tokensOut != null ? (
+                                                <Badge variant="outline" className="text-[10px]">
+                                                  {step.tokensIn ?? 0} in / {step.tokensOut ?? 0} out
+                                                </Badge>
+                                              ) : null}
+                                              {chunkByStep.get(step.id) ? (
+                                                <Badge variant="outline" className="text-[10px]">
+                                                  {chunkByStep.get(step.id)} trecho(s)
+                                                </Badge>
+                                              ) : null}
+                                            </div>
+                                            <details className="mt-2 text-xs">
+                                              <summary className="cursor-pointer text-muted-foreground">
+                                                Dados brutos
+                                              </summary>
+                                              <pre className="mt-2 max-h-56 overflow-auto rounded-md bg-muted p-2 whitespace-pre-wrap text-[11px]">
+                                                {inspectData({
+                                                  input: step.input,
+                                                  output: step.output,
+                                                  error: step.error,
+                                                })}
+                                              </pre>
+                                            </details>
+                                          </div>
+                                        ))}
+                                      </div>
+                                      {run.chunks.length > 0 ? (
+                                        <div className="rounded-md border bg-background p-3">
+                                          <div className="font-medium text-sm">
+                                            Evidências recuperadas
+                                          </div>
+                                          <div className="mt-2 grid gap-2 md:grid-cols-2">
+                                            {run.chunks.map((chunk) => (
+                                              <div
+                                                key={chunk.id}
+                                                className="rounded-md bg-muted p-2 text-xs"
+                                              >
+                                                <div className="font-mono">
+                                                  {shortId(chunk.chunkId)}
+                                                </div>
+                                                <div className="mt-1 text-muted-foreground">
+                                                  {chunk.source} #{chunk.chunkIndex}
+                                                </div>
+                                                <div className="mt-1 flex gap-2">
+                                                  {chunk.score != null ? (
+                                                    <span>
+                                                      score {formatScorePct(chunk.score)}
+                                                    </span>
+                                                  ) : null}
+                                                  {chunk.distance != null ? (
+                                                    <span>
+                                                      dist. {chunk.distance.toFixed(3)}
+                                                    </span>
+                                                  ) : null}
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ) : null}
+                            </Fragment>
+                          )
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </main>
       </SidebarInset>
     </SidebarProvider>

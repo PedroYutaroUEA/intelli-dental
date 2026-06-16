@@ -68,6 +68,16 @@ export class AgentService {
     return this.tracing.getTraceForUser(runId, clinicId, userId);
   }
 
+  listTraces(input: {
+    clinicId: string;
+    userId: string;
+    sessionId?: string;
+    patientId?: string;
+    limit?: number;
+  }) {
+    return this.tracing.listTracesForUser(input);
+  }
+
   getMetrics(clinicId: string) {
     return this.metrics.report(clinicId);
   }

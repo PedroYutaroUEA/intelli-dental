@@ -739,11 +739,14 @@ export interface AgentRetrievedChunkTrace {
 export interface AgentRunTrace {
   run: {
     id: string;
+    sessionId?: string;
+    patientId?: string;
     question: string;
     intent?: string | null;
     fallbackUsed?: boolean | null;
     insufficientEvidence?: boolean | null;
     totalLatencyMs?: number | null;
+    error?: unknown;
     createdAt?: string;
   };
   steps: AgentTraceStep[];
@@ -752,9 +755,19 @@ export interface AgentRunTrace {
   tools: unknown[];
 }
 
+export type AgentRunRegistryItem = AgentRunTrace;
+
 export const agentApi = {
   getRun(runId: string) {
     return request<AgentRunTrace>(`/agent/runs/${runId}`);
+  },
+  listRuns(params?: { sessionId?: string; patientId?: string; limit?: number }) {
+    const q = new URLSearchParams();
+    if (params?.sessionId) q.set("sessionId", params.sessionId);
+    if (params?.patientId) q.set("patientId", params.patientId);
+    if (params?.limit) q.set("limit", String(params.limit));
+    const suffix = q.toString() ? `?${q.toString()}` : "";
+    return request<AgentRunRegistryItem[]>(`/agent/runs${suffix}`);
   },
 };
 
