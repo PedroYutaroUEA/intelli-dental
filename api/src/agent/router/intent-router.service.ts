@@ -60,6 +60,7 @@ export class IntentRouterService {
             intent === 'multi_step_question',
           needsTool: intent === 'database_query',
           reason: String(parsed?.reason ?? 'llm'),
+          modelUsage: this.modelUsage(res),
         };
       }
     } catch (err) {
@@ -67,6 +68,16 @@ export class IntentRouterService {
     }
 
     return heuristic;
+  }
+
+  private modelUsage(res: Awaited<ReturnType<ModelGatewayService['complete']>>) {
+    return {
+      model: res.model,
+      tokensIn: res.tokensIn,
+      tokensOut: res.tokensOut,
+      latencyMs: res.latencyMs,
+      fallbackModelUsed: res.fallbackModelUsed,
+    };
   }
 
   private fromHeuristic(question: string): IntentResult {

@@ -11,10 +11,12 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sparkles, Send, AlertCircle, Loader2 } from "lucide-react"
 import {
+  agentApi,
   chatApi,
   documentsApi,
   patientsApi,
   streamChat,
+  type AgentRunTrace,
   type ChatActionPayload,
   type ChatActionResult,
   type ChatMessage,
@@ -51,6 +53,9 @@ interface UiMessage {
   step?: string
   debug?: AgentDebugState
   agentRunId?: string
+  agentTrace?: AgentRunTrace
+  traceLoading?: boolean
+  traceError?: string
 }
 
 interface AgentDebugState {
@@ -62,6 +67,7 @@ interface AgentDebugState {
     missing?: string[]
   }
   verified?: boolean
+  steps?: AgentStepEvent[]
 }
 
 export default function AssistantPage() {
@@ -147,8 +153,9 @@ function AssistantPageInner() {
                     contextRelevance: m.contextRelevance ?? null,
                     groundedness: m.groundedness ?? null,
                     answerRelevance: m.answerRelevance ?? null,
-                  }
+                }
                 : undefined,
+            agentRunId: m.agentRunId ?? undefined,
           }
         }),
       )
@@ -233,6 +240,9 @@ function AssistantPageInner() {
       },
       onDone(done) {
         setStreaming(false)
+        if (done?.agentRunId) {
+          void loadAgentTrace(assistantId, done.agentRunId)
+        }
         setMessages((m) =>
           m.map((msg) =>
             msg.id === assistantId
@@ -353,14 +363,43 @@ function AssistantPageInner() {
     )
   }
 
+  async function loadAgentTrace(messageId: string, runId: string) {
+    setMessages((m) =>
+      m.map((msg) =>
+        msg.id === messageId
+          ? { ...msg, traceLoading: true, traceError: undefined }
+          : msg,
+      ),
+    )
+    try {
+      const trace = await agentApi.getRun(runId)
+      setMessages((m) =>
+        m.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, agentTrace: trace, traceLoading: false }
+            : msg,
+        ),
+      )
+    } catch (err) {
+      setMessages((m) =>
+        m.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, traceLoading: false, traceError: errorMessage(err) }
+            : msg,
+        ),
+      )
+    }
+  }
+
   function mergeDebug(
     current: AgentDebugState | undefined,
     event: AgentStepEvent,
   ): AgentDebugState | undefined {
-    if (!event.data || typeof event.data !== "object") return current
+    const steps = [...(current?.steps ?? []), event]
+    if (!event.data || typeof event.data !== "object") return { ...current, steps }
     const data = event.data as Record<string, unknown>
     if (event.step === "intent" && typeof data.intent === "string") {
-      return { ...current, intent: data.intent }
+      return { ...current, steps, intent: data.intent }
     }
     if (
       (event.step === "rewrite" || event.step === "retrieve") &&
@@ -368,12 +407,14 @@ function AssistantPageInner() {
     ) {
       return {
         ...current,
+        steps,
         queries: data.queries.filter((q): q is string => typeof q === "string"),
       }
     }
     if (event.step === "evaluate") {
       return {
         ...current,
+        steps,
         context: {
           sufficient:
             typeof data.sufficient === "boolean" ? data.sufficient : undefined,
@@ -385,9 +426,113 @@ function AssistantPageInner() {
       }
     }
     if (event.step === "verify" && typeof data.faithful === "boolean") {
-      return { ...current, verified: data.faithful }
+      return { ...current, steps, verified: data.faithful }
     }
-    return current
+    return { ...current, steps }
+  }
+
+  function openTrace(messageId: string, runId?: string) {
+    if (!runId) return
+    const message = messages.find((msg) => msg.id === messageId)
+    if (!message?.agentTrace && !message?.traceLoading) {
+      void loadAgentTrace(messageId, runId)
+    }
+  }
+
+  function agentInspectionRows(message: UiMessage) {
+    const liveSteps = message.debug?.steps ?? []
+    const traceSteps = message.agentTrace?.steps ?? []
+    const findLive = (name: string) =>
+      [...liveSteps].reverse().find((step) => step.step === name)
+    const findTrace = (name: string) =>
+      [...traceSteps].reverse().find((step) => step.type === name)
+    const retrieveSteps = traceSteps.filter((step) => step.type === "retrieve")
+    const hadRetry = retrieveSteps.length > 1 || liveSteps.filter((step) => step.step === "retrieve").length > 1
+    const stepData = (name: string) => {
+      const trace = findTrace(name)
+      if (trace) {
+        return {
+          model: trace.model ?? "sem chamada LLM registrada",
+          tokensIn: trace.tokensIn ?? null,
+          tokensOut: trace.tokensOut ?? null,
+          durationMs: trace.durationMs ?? null,
+          input: trace.input,
+          output: trace.output,
+          error: trace.error,
+        }
+      }
+      return findLive(name)?.data
+    }
+    const rows = [
+      {
+        name: "1. Registrar pergunta",
+        status: message.agentTrace ? "concluído" : "ao vivo",
+        data: message.agentTrace?.run
+          ? { question: message.agentTrace.run.question, runId: message.agentTrace.run.id }
+          : undefined,
+      },
+      {
+        name: "2. Classificar intenção",
+        status: findTrace("intent") || findLive("intent") ? "concluído" : "pendente",
+        data: stepData("intent"),
+      },
+      {
+        name: "3. Planejar execução",
+        status: findTrace("plan") || findLive("plan") ? "concluído" : "pendente",
+        data: stepData("plan"),
+      },
+      {
+        name: "4. Reescrever consulta",
+        status: findTrace("rewrite") || findLive("rewrite") ? "concluído" : "pendente",
+        data: stepData("rewrite"),
+      },
+      {
+        name: "5. Recuperar evidências",
+        status: findTrace("retrieve") || findLive("retrieve") ? "concluído" : "pendente",
+        data: stepData("retrieve"),
+      },
+      {
+        name: "6. Avaliar contexto",
+        status: findTrace("evaluate") || findLive("evaluate") ? "concluído" : "pendente",
+        data: stepData("evaluate"),
+      },
+      {
+        name: "7. Retry corretivo",
+        status: hadRetry ? "usado" : "não usado",
+        data: retrieveSteps.length > 0 ? retrieveSteps.map((step) => step.output) : undefined,
+      },
+      {
+        name: "8. Gerar resposta",
+        status: findTrace("generate") || findLive("generate") ? "concluído" : "pendente",
+        data: stepData("generate"),
+      },
+      {
+        name: "9. Verificar resposta",
+        status: findTrace("verify") || findLive("verify") ? "concluído" : "pendente",
+        data: stepData("verify"),
+      },
+      {
+        name: "10. Persistir trace",
+        status: message.agentTrace ? "concluído" : message.agentRunId ? "disponível" : "pendente",
+        data: message.agentTrace
+          ? {
+              steps: message.agentTrace.steps.length,
+              chunks: message.agentTrace.chunks.length,
+              fallbackUsed: message.agentTrace.run.fallbackUsed,
+            }
+          : undefined,
+      },
+    ]
+    return rows
+  }
+
+  function inspectData(value: unknown): string {
+    if (value == null) return "Sem dados registrados."
+    try {
+      return JSON.stringify(value, null, 2)
+    } catch {
+      return String(value)
+    }
   }
 
   return (
@@ -607,6 +752,42 @@ function AssistantPageInner() {
                             Cancelar
                           </Button>
                         </div>
+                      ) : null}
+                      {m.role === "assistant" && (m.debug?.steps?.length || m.agentRunId) ? (
+                        <details
+                          className="mt-2 text-xs opacity-90"
+                          onToggle={(event) => {
+                            if ((event.currentTarget as HTMLDetailsElement).open) {
+                              openTrace(m.id, m.agentRunId)
+                            }
+                          }}
+                        >
+                          <summary className="cursor-pointer">
+                            Orquestração do agente
+                            {m.traceLoading ? " · carregando trace..." : ""}
+                          </summary>
+                          {m.traceError ? (
+                            <div className="mt-2 text-destructive">{m.traceError}</div>
+                          ) : null}
+                          <div className="mt-2 space-y-2">
+                            {agentInspectionRows(m).map((row) => (
+                              <div
+                                key={row.name}
+                                className="rounded-md border border-border/60 bg-background/60 p-2"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-medium">{row.name}</span>
+                                  <Badge variant="outline" className="text-[10px]">
+                                    {row.status}
+                                  </Badge>
+                                </div>
+                                <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap text-[11px] text-muted-foreground">
+                                  {inspectData(row.data)}
+                                </pre>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
                       ) : null}
                       {m.role === "assistant" && m.sources && m.sources.length > 0 ? (
                         <details className="mt-2 text-xs opacity-80">

@@ -2,12 +2,11 @@
 # ----------------------------------------------------------------------------
 # Intelli Dental bootstrap
 #
-# - Ensures host Ollama is running and reachable from containers (0.0.0.0).
-# - Pulls required Ollama models (phi3:mini, nomic-embed-text).
-# - Optionally pulls the quality-upgrade model (llama3.2:3b).
 # - Copies *.env.example -> *.env on first run.
+# - Reads model names from api/.env and rag-pipeline/.env; pulls all of them.
+# - Ensures host Ollama is running and reachable from containers (0.0.0.0).
 # - Builds and starts the stack with docker compose.
-# - Waits for services to become healthy and tails relevant logs.
+# - Waits for services to become healthy.
 #
 # Re-running the script is safe: every step is idempotent.
 # ----------------------------------------------------------------------------
@@ -18,10 +17,25 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 OLLAMA_PORT="${OLLAMA_PORT:-11434}"
-OLLAMA_MODELS=("phi3:mini" "nomic-embed-text")
-OLLAMA_QUALITY_MODELS=("llama3.2:3b")
-AGENT_QUALITY_UPGRADE="${AGENT_QUALITY_UPGRADE:-false}"
 OLLAMA_LOG="${TMPDIR:-/tmp}/intelli-dental-ollama.log"
+
+# Read a key=value pair from an env file (strips surrounding quotes and spaces)
+parse_env_value() {
+  local file="$1" key="$2"
+  grep -E "^[[:space:]]*${key}[[:space:]]*=" "${file}" 2>/dev/null \
+    | tail -n1 | cut -d= -f2- | sed "s/^[[:space:]]*//;s/[[:space:]]*$//;s/^['\"]//;s/['\"]$//"
+}
+
+# Accumulate unique non-empty model names into models_to_pull[]
+declare -A _seen_models=()
+models_to_pull=()
+add_model() {
+  local m="$1"
+  [[ -z "${m}" ]] && return
+  [[ -n "${_seen_models[${m}]+x}" ]] && return
+  _seen_models["${m}"]=1
+  models_to_pull+=("${m}")
+}
 
 c_red()    { printf '\033[31m%s\033[0m\n' "$*" >&2; }
 c_yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
@@ -43,7 +57,45 @@ require ollama
 require curl
 
 # ----------------------------------------------------------------------------
-# 2. Ollama: ensure it listens on 0.0.0.0 so containers can reach it
+# 2. Seed .env files on first run (must happen before reading model names)
+# ----------------------------------------------------------------------------
+step "Seeding .env files (only if missing)"
+for path in api rag-pipeline; do
+  if [[ -f "${path}/.env.example" && ! -f "${path}/.env" ]]; then
+    cp "${path}/.env.example" "${path}/.env"
+    c_green "  + created ${path}/.env"
+  fi
+done
+
+# ----------------------------------------------------------------------------
+# 3. Collect models from .env files
+# ----------------------------------------------------------------------------
+step "Reading model configuration from .env files"
+
+for key in LLM_MODEL AGENT_LLM_MODEL AGENT_PLAN_MODEL AGENT_REWRITE_MODEL; do
+  val="$(parse_env_value api/.env "${key}")"
+  if [[ -n "${val}" ]]; then
+    c_green "  api/.env          ${key}=${val}"
+    add_model "${val}"
+  fi
+done
+
+for key in LLM_MODEL EMBED_MODEL; do
+  val="$(parse_env_value rag-pipeline/.env "${key}")"
+  if [[ -n "${val}" ]]; then
+    c_green "  rag-pipeline/.env ${key}=${val}"
+    add_model "${val}"
+  fi
+done
+
+if [[ ${#models_to_pull[@]} -eq 0 ]]; then
+  c_yellow "No models found in .env files; falling back to defaults."
+  models_to_pull=("qwen2.5:3b" "nomic-embed-text")
+fi
+c_blue "  Models to pull: ${models_to_pull[*]}"
+
+# ----------------------------------------------------------------------------
+# 4. Ollama: ensure it listens on 0.0.0.0 so containers can reach it
 # ----------------------------------------------------------------------------
 step "Ensuring Ollama is reachable on 0.0.0.0:${OLLAMA_PORT}"
 
@@ -89,15 +141,11 @@ if [[ "${needs_restart}" == true ]]; then
 fi
 
 # ----------------------------------------------------------------------------
-# 3. Pull required models if missing
+# 5. Pull required models if missing
 # ----------------------------------------------------------------------------
-if [[ "${AGENT_QUALITY_UPGRADE}" == "true" ]]; then
-  OLLAMA_MODELS+=("${OLLAMA_QUALITY_MODELS[@]}")
-fi
-
 step "Ensuring Ollama models are present"
 existing_models="$(curl -sf "http://127.0.0.1:${OLLAMA_PORT}/api/tags" | tr ',' '\n' | grep -oE '"name":"[^"]+"' | sed 's/.*:"//;s/"//' || true)"
-for model in "${OLLAMA_MODELS[@]}"; do
+for model in "${models_to_pull[@]}"; do
   if grep -Fxq "${model}" <<<"${existing_models}"; then
     c_green "  ✓ ${model}"
   else
@@ -106,25 +154,8 @@ for model in "${OLLAMA_MODELS[@]}"; do
   fi
 done
 
-if [[ "${AGENT_QUALITY_UPGRADE}" == "true" ]]; then
-  c_green "Quality upgrade enabled. Recommended routing: AGENT_PLAN_MODEL=llama3.2:3b and AGENT_REWRITE_MODEL=llama3.2:3b."
-else
-  c_yellow "Quality upgrade disabled. Set AGENT_QUALITY_UPGRADE=true to also pull llama3.2:3b."
-fi
-
 # ----------------------------------------------------------------------------
-# 4. Seed .env files on first run
-# ----------------------------------------------------------------------------
-step "Seeding .env files (only if missing)"
-for path in api rag-pipeline; do
-  if [[ -f "${path}/.env.example" && ! -f "${path}/.env" ]]; then
-    cp "${path}/.env.example" "${path}/.env"
-    c_green "  + created ${path}/.env"
-  fi
-done
-
-# ----------------------------------------------------------------------------
-# 5. Build & start the stack
+# 6. Build & start the stack
 # ----------------------------------------------------------------------------
 step "Building images (cached layers reused when possible)"
 docker compose build
@@ -133,7 +164,7 @@ step "Starting stack"
 docker compose up -d
 
 # ----------------------------------------------------------------------------
-# 6. Wait for postgres + api to be ready
+# 7. Wait for postgres + api to be ready
 # ----------------------------------------------------------------------------
 step "Waiting for Postgres to become healthy"
 for _ in $(seq 1 60); do
@@ -162,7 +193,7 @@ for _ in $(seq 1 60); do
 done
 
 # ----------------------------------------------------------------------------
-# 7. Summary
+# 8. Summary
 # ----------------------------------------------------------------------------
 cat <<EOF
 

@@ -43,4 +43,111 @@ describe('RetrieverTool', () => {
 
     assert.deepEqual(calls, [{ query: 'q', filters: { patientId: 'patient-1' }, rerank: true }]);
   });
+
+  it('falls back to postgres chunks when rag retrieval fails', async () => {
+    const fallbackChunks = [
+      {
+        chunkId: 'postgres:patient:patient-1',
+        document: 'Telefone: 9999-9999',
+        source: 'postgres:patient',
+        index: 0,
+        distance: 0.1,
+        score: 0.9,
+        metadata: { table: 'patients' },
+      },
+    ];
+    const tool = new RetrieverTool(
+      {
+        retrieve: async () => {
+          throw new Error('chroma unavailable');
+        },
+      } as any,
+      undefined,
+      {
+        retrieveMany: async (queries: string[], ctx: AgentContext) => {
+          assert.deepEqual(queries, ['telefone']);
+          assert.equal(ctx.patientId, 'patient-1');
+          return fallbackChunks;
+        },
+      } as any,
+    );
+
+    const chunks = await tool.retrieveMany(['telefone'], context);
+
+    assert.deepEqual(chunks, fallbackChunks);
+  });
+
+  it('merges postgres chunks into the first hybrid retrieval', async () => {
+    const tool = new RetrieverTool(
+      {
+        retrieve: async () => ({
+          chunks: [
+            {
+              chunkId: 'vector-1',
+              document: 'Documento vetorial',
+              source: 'anamnesis.txt',
+              index: 0,
+              distance: 0.2,
+              score: 0.8,
+              metadata: { source: 'anamnesis.txt' },
+            },
+          ],
+          queryEcho: 'q',
+          tookMs: 1,
+        }),
+      } as any,
+      undefined,
+      {
+        retrieveMany: async () => [
+          {
+            chunkId: 'postgres:patient:patient-1',
+            document: 'Telefone: 9999-9999',
+            source: 'postgres:patient',
+            index: 0,
+            distance: 0.1,
+            score: 0.9,
+            metadata: { table: 'patients' },
+          },
+        ],
+      } as any,
+    );
+
+    const chunks = await tool.retrieveMany(['telefone'], context, { includeDatabase: true });
+
+    assert.deepEqual(chunks.map((chunk) => chunk.chunkId), [
+      'postgres:patient:patient-1',
+      'vector-1',
+    ]);
+  });
+
+  it('uses only postgres when databaseOnly is requested', async () => {
+    let vectorCalls = 0;
+    const tool = new RetrieverTool(
+      {
+        retrieve: async () => {
+          vectorCalls += 1;
+          return { chunks: [], queryEcho: 'q', tookMs: 1 };
+        },
+      } as any,
+      undefined,
+      {
+        retrieveMany: async () => [
+          {
+            chunkId: 'postgres:patient:patient-1',
+            document: 'Telefone: 9999-9999',
+            source: 'postgres:patient',
+            index: 0,
+            distance: 0.1,
+            score: 0.9,
+            metadata: { table: 'patients' },
+          },
+        ],
+      } as any,
+    );
+
+    const chunks = await tool.retrieveMany(['telefone'], context, { databaseOnly: true });
+
+    assert.equal(vectorCalls, 0);
+    assert.deepEqual(chunks.map((chunk) => chunk.chunkId), ['postgres:patient:patient-1']);
+  });
 });

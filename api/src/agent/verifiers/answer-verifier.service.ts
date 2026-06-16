@@ -65,12 +65,23 @@ export class AnswerVerifierService {
             : cheap.unsupportedClaims,
           action,
           method: 'hybrid',
+          modelUsage: this.modelUsage(res),
         };
       }
     } catch (err) {
       this.logger.warn(`answer verifier fallback: ${(err as Error).message}`);
     }
     return cheap;
+  }
+
+  private modelUsage(res: Awaited<ReturnType<ModelGatewayService['complete']>>) {
+    return {
+      model: res.model,
+      tokensIn: res.tokensIn,
+      tokensOut: res.tokensOut,
+      latencyMs: res.latencyMs,
+      fallbackModelUsed: res.fallbackModelUsed,
+    };
   }
 
   private cheapVerify(

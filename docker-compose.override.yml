@@ -23,6 +23,9 @@ services:
     command: ["sh", "-c", "pnpm install --prefer-offline --no-frozen-lockfile && pnpm dev"]
     volumes:
       - ./rag-pipeline:/app
+      # Keep patient uploads visible to rag-pipeline. The API stores files
+      # under /app/data/documents and sends that absolute path to /v1/ingest.
+      - ./api/data:/app/data
       - /app/node_modules
     # Reach the host's `ollama serve` from inside the container.
     extra_hosts:

@@ -10,6 +10,7 @@ import type {
   ContextEvaluation,
   RetrievedChunk,
   VerificationResult,
+  ModelUsage,
 } from '../contracts';
 import { ContextEvaluatorService } from '../evaluators/context-evaluator.service';
 import { AnswerGeneratorService } from '../generators/answer-generator.service';
@@ -91,11 +92,15 @@ export class AgentOrchestrator {
       input?: unknown,
       error?: { code: string; message: string },
     ) => {
+      const modelUsage = this.modelUsageFrom(output);
       return await this.tracing.recordStep({
         runId: run.id,
         seq: ++seq,
         type,
         startedAt: stepStartedAt,
+        model: modelUsage?.model,
+        tokensIn: modelUsage?.tokensIn,
+        tokensOut: modelUsage?.tokensOut,
         input,
         output,
         error,
@@ -296,13 +301,24 @@ export class AgentOrchestrator {
 
           this.assertBudget(startedAt, req.budget);
           const retrieveStartedAt = Date.now();
-          emitStep({ type: 'step', step: 'retrieve', data: { attempt, queries: rewrite.queries, planStep: step.id } });
+          const retrievalMode = attempt === 1 ? 'hybrid' : 'database_only';
+          emitStep({
+            type: 'step',
+            step: 'retrieve',
+            data: { attempt, queries: rewrite.queries, planStep: step.id, retriever: retrievalMode },
+          });
           chunks = this.sanitizer.sanitizeChunks(
-            await this.retriever.retrieveMany(rewrite.queries, ctx),
+            await this.retriever.retrieveMany(rewrite.queries, ctx, {
+              includeDatabase: retrievalMode === 'hybrid',
+              databaseOnly: retrievalMode === 'database_only',
+            }),
           );
+          const hasDatabaseChunks = chunks.some((chunk) => chunk.source.startsWith('postgres:'));
           const retrieveStep = await record('retrieve', retrieveStartedAt, {
             attempt,
             planStep: step.id,
+            retriever: retrievalMode,
+            databaseQueries: hasDatabaseChunks ? rewrite.queries : undefined,
             count: chunks.length,
             chunks: chunks.map((chunk) => ({
               chunkId: chunk.chunkId,
@@ -311,6 +327,14 @@ export class AgentOrchestrator {
               score: chunk.score,
               distance: chunk.distance,
             })),
+          }, {
+            attempt,
+            planStep: step.id,
+            queries: rewrite.queries,
+            retriever: retrievalMode,
+            databaseQueries: retrievalMode === 'database_only' || retrievalMode === 'hybrid'
+              ? rewrite.queries
+              : undefined,
           });
           await this.tracing.recordRetrievedChunks?.(run.id, retrieveStep?.id, chunks);
 
@@ -363,13 +387,20 @@ export class AgentOrchestrator {
         emitStep({ type: 'step', step: 'generate' });
         const generateStartedAt = Date.now();
         const generationQuestion = this.withMemory(question, memoryContext);
+        let generationModelUsage: ModelUsage | undefined;
         if (this.generator) {
-          assistantText = (await this.generator.generate(generationQuestion, chunks, ctx, emit)).text;
+          const generated = await this.generator.generate(generationQuestion, chunks, ctx, emit);
+          assistantText = generated.text;
+          generationModelUsage = generated.modelUsage;
         } else {
           assistantText = await this.generate(ctx.patientId, generationQuestion, chunks, emit);
         }
         llmCalls += 1;
-        await record('generate', generateStartedAt, { chars: assistantText.length });
+        await record('generate', generateStartedAt, {
+          chars: assistantText.length,
+          modelUsage: generationModelUsage,
+          provider: generationModelUsage ? 'model_gateway' : 'rag_pipeline',
+        });
         if (assistantText.trim().length > 0) {
           try {
             metrics = await this.rag.evaluate({
@@ -553,6 +584,21 @@ export class AgentOrchestrator {
       score: 0,
       missing: ['no_context'],
       method: 'cosine' as const,
+    };
+  }
+
+  private modelUsageFrom(output: unknown): ModelUsage | undefined {
+    if (!output || typeof output !== 'object') return undefined;
+    const usage = (output as { modelUsage?: unknown }).modelUsage;
+    if (!usage || typeof usage !== 'object') return undefined;
+    const modelUsage = usage as Partial<ModelUsage>;
+    if (typeof modelUsage.model !== 'string') return undefined;
+    return {
+      model: modelUsage.model,
+      tokensIn: typeof modelUsage.tokensIn === 'number' ? modelUsage.tokensIn : 0,
+      tokensOut: typeof modelUsage.tokensOut === 'number' ? modelUsage.tokensOut : 0,
+      latencyMs: typeof modelUsage.latencyMs === 'number' ? modelUsage.latencyMs : 0,
+      fallbackModelUsed: modelUsage.fallbackModelUsed === true,
     };
   }
 

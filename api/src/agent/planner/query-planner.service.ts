@@ -47,12 +47,23 @@ export class QueryPlannerService {
         return {
           strategy: steps.length === 1 ? 'single' : 'sequential',
           steps,
+          modelUsage: this.modelUsage(res),
         };
       }
     } catch (err) {
       this.logger.warn(`planner fallback: ${(err as Error).message}`);
     }
     return QueryPlannerService.singleStep(question);
+  }
+
+  private modelUsage(res: Awaited<ReturnType<ModelGatewayService['complete']>>) {
+    return {
+      model: res.model,
+      tokensIn: res.tokensIn,
+      tokensOut: res.tokensOut,
+      latencyMs: res.latencyMs,
+      fallbackModelUsed: res.fallbackModelUsed,
+    };
   }
 
   private toStep(item: unknown): PlannedStep | null {

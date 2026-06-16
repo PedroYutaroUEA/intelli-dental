@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, type FormEvent } from "react";
-import { Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import {
   appointmentsApi,
   type AppointmentRecord,
@@ -9,7 +9,21 @@ import {
   type DentistSummary,
   type PatientSummary,
 } from "@/lib/api-client";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -155,7 +169,7 @@ export function AppointmentDialog({
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [patientSearch, setPatientSearch] = useState("");
+  const [patientPopoverOpen, setPatientPopoverOpen] = useState(false);
 
   const lastApptRef = useRef<AppointmentRecord | null>(null);
   if (appointment) {
@@ -192,7 +206,7 @@ export function AppointmentDialog({
         dentistId: lockDentistId ?? "",
       });
     }
-    setPatientSearch("");
+    setPatientPopoverOpen(false);
   }, [open, mode, appointment, lockPatientId, lockDentistId]);
 
   const isTerminal =
@@ -283,24 +297,7 @@ export function AppointmentDialog({
       : [];
 
   const patientSelectDisabled = mode === "edit" || !!lockPatientId || isTerminal;
-  const searchDigits = patientSearch.replace(/\D+/g, "");
-  const searchTermLc = patientSearch.trim().toLowerCase();
-  const filteredPatients = patientSearch.trim()
-    ? patients.filter((p) => {
-        const nameMatch = p.fullName.toLowerCase().includes(searchTermLc);
-        const cpfDigits = (p.cpf ?? "").replace(/\D+/g, "");
-        const cpfMatch =
-          searchDigits.length > 0 && cpfDigits.includes(searchDigits);
-        return nameMatch || cpfMatch;
-      })
-    : patients;
-  // Always include the currently selected patient so the Select can resolve
-  // its value to a label even when filtered out by the search box.
   const selectedPatient = patients.find((p) => p.id === form.patientId);
-  const visiblePatients =
-    selectedPatient && !filteredPatients.some((p) => p.id === selectedPatient.id)
-      ? [selectedPatient, ...filteredPatients]
-      : filteredPatients;
 
   const formatPatientLabel = (p: PatientSummary) =>
     p.cpf ? `${p.fullName} — CPF ${p.cpf}` : p.fullName;
@@ -325,35 +322,66 @@ export function AppointmentDialog({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label>Paciente</Label>
-              {!patientSelectDisabled && (
-                <Input
-                  placeholder="Buscar por nome ou CPF"
-                  value={patientSearch}
-                  onChange={(e) => setPatientSearch(e.target.value)}
-                />
-              )}
-              <Select
-                value={form.patientId}
-                onValueChange={(v) => setForm({ ...form, patientId: v })}
-                disabled={patientSelectDisabled}
+              <Popover
+                open={patientPopoverOpen}
+                onOpenChange={setPatientPopoverOpen}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {visiblePatients.length === 0 ? (
-                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                      Nenhum paciente encontrado
-                    </div>
-                  ) : (
-                    visiblePatients.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {formatPatientLabel(p)}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={patientPopoverOpen}
+                    disabled={patientSelectDisabled}
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className="truncate">
+                      {selectedPatient
+                        ? formatPatientLabel(selectedPatient)
+                        : "Selecione"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-(--radix-popover-trigger-width) p-0"
+                  align="start"
+                >
+                  <Command>
+                    <CommandInput placeholder="Buscar por nome ou CPF" />
+                    <CommandList>
+                      <CommandEmpty>Nenhum paciente encontrado</CommandEmpty>
+                      <CommandGroup>
+                        {patients.map((p) => {
+                          const cpfDigits = (p.cpf ?? "").replace(/\D+/g, "");
+                          return (
+                            <CommandItem
+                              key={p.id}
+                              value={`${p.fullName} ${p.cpf ?? ""} ${cpfDigits}`}
+                              onSelect={() => {
+                                setForm({ ...form, patientId: p.id });
+                                setPatientPopoverOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  form.patientId === p.id
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                              />
+                              <span className="truncate">
+                                {formatPatientLabel(p)}
+                              </span>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">

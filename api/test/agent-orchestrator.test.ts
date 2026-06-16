@@ -35,6 +35,7 @@ describe('AgentOrchestrator', () => {
   it('retries weak retrieval once before falling back', async () => {
     const rewrittenInputs: string[] = [];
     const retrievedQueries: string[][] = [];
+    const retrievalOptions: unknown[] = [];
     const events: AgentStreamEvent[] = [];
 
     const orchestrator = new AgentOrchestrator(
@@ -67,8 +68,9 @@ describe('AgentOrchestrator', () => {
         },
       } as any,
       {
-        retrieveMany: async (queries: string[]) => {
+        retrieveMany: async (queries: string[], _ctx: AgentContext, opts: unknown) => {
           retrievedQueries.push(queries);
+          retrievalOptions.push(opts);
           return [
             {
               chunkId: `chunk-${retrievedQueries.length}`,
@@ -111,6 +113,10 @@ describe('AgentOrchestrator', () => {
     assert.equal(res.fallbackUsed, true);
     assert.equal(res.answer, 'Não encontrei evidências suficientes nos registros do paciente.');
     assert.equal(retrievedQueries.length, 2);
+    assert.deepEqual(retrievalOptions, [
+      { includeDatabase: true, databaseOnly: false },
+      { includeDatabase: false, databaseOnly: true },
+    ]);
     assert.deepEqual(rewrittenInputs, ['Qual exatamente alergia?', 'alergia']);
     assert.equal(
       events.filter((event) => event.type === 'step' && event.step === 'retrieve').length,
@@ -185,6 +191,121 @@ describe('AgentOrchestrator', () => {
 
     assert.equal(res.insufficientEvidence, true);
     assert.equal(retrievedQueries.length, 1);
+  });
+
+  it('records retrieve queries when postgres retriever is used', async () => {
+    const recordedSteps: any[] = [];
+    const orchestrator = new AgentOrchestrator(
+      {
+        appendMessage: async () => undefined,
+        touchSession: async () => undefined,
+      } as any,
+      {} as any,
+      {
+        evaluate: async () => ({
+          contextRelevance: 0.9,
+          groundedness: 0.9,
+          answerRelevance: 0.9,
+          perChunk: [0.9],
+        }),
+      } as any,
+      {
+        classify: async () => ({
+          intent: 'knowledge_base_search',
+          confidence: 1,
+          needsRetrieval: true,
+          needsTool: false,
+          reason: 'heuristic_default',
+        }),
+      } as any,
+      {
+        rewrite: async () => ({ queries: ['telefone paciente'] }),
+      } as any,
+      {
+        retrieveMany: async () => [
+          {
+            chunkId: 'postgres:patient:patient-1',
+            document: 'Telefone: 9999-9999',
+            source: 'postgres:patient',
+            index: 0,
+            distance: 0.1,
+            score: 0.9,
+            metadata: { sourceType: 'database', table: 'patients' },
+          },
+        ],
+      } as any,
+      new ContextEvaluatorService(),
+      {
+        verify: async () => ({
+          faithful: true,
+          groundedness: 0.9,
+          citationsOk: true,
+          unsupportedClaims: [],
+          action: 'pass',
+          method: 'hybrid',
+        }),
+      } as any,
+      new SanitizerService(),
+      {
+        startRun: async () => ({ id: 'run-db' }),
+        recordStep: async (step: any) => {
+          recordedSteps.push(step);
+          return { id: `step-${recordedSteps.length}` };
+        },
+        recordRetrievedChunks: async () => undefined,
+        recordContextEvaluation: async () => undefined,
+        recordVerification: async () => undefined,
+        recordTool: async () => undefined,
+        finishRun: async () => undefined,
+      } as any,
+      {
+        ...flags,
+        all: () => ({ ...flags.all(), crag: false }),
+      } as any,
+      undefined,
+      {
+        generate: async (_question: string, _chunks: unknown, _ctx: unknown, emit: (event: AgentStreamEvent) => void) => {
+          const text = 'Telefone: 9999-9999 [postgres:patient#0]';
+          emit({ type: 'token', token: text });
+          return {
+            text,
+            citations: [],
+            modelUsage: {
+              model: 'phi3:mini',
+              tokensIn: 11,
+              tokensOut: 7,
+              latencyMs: 123,
+              fallbackModelUsed: false,
+            },
+          };
+        },
+      } as any,
+    );
+
+    const res = await orchestrator.run(
+      {
+        question: 'qual telefone?',
+        context,
+        budget: {
+          maxLlmCalls: 5,
+          maxRetrievalAttempts: 1,
+          maxWallClockMs: 15000,
+        },
+      },
+      () => undefined,
+    );
+
+    const retrieveStep = recordedSteps.find((step) => step.type === 'retrieve');
+    assert.equal(res.fallbackUsed, false);
+    assert.deepEqual(retrieveStep.input.queries, ['telefone paciente']);
+    assert.deepEqual(retrieveStep.input.databaseQueries, ['telefone paciente']);
+    assert.equal(retrieveStep.input.retriever, 'hybrid');
+    assert.deepEqual(retrieveStep.output.databaseQueries, ['telefone paciente']);
+    assert.equal(retrieveStep.output.retriever, 'hybrid');
+    const generateStep = recordedSteps.find((step) => step.type === 'generate');
+    assert.equal(generateStep.model, 'phi3:mini');
+    assert.equal(generateStep.tokensIn, 11);
+    assert.equal(generateStep.tokensOut, 7);
   });
 
   it('runs a multi-step clinical flow with CRAG retry on the weak step', async () => {

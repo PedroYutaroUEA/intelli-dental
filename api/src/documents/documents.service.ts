@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { and, desc, eq } from 'drizzle-orm';
 import { mkdir, unlink, writeFile } from 'fs/promises';
-import { extname, join } from 'path';
+import { extname, join, resolve } from 'path';
 import { DB, type Db } from '../db/db.module';
 import { patientDocuments, patients } from '../db/schemas';
 import { RagService } from '../rag/rag.service';
@@ -31,7 +31,7 @@ export class DocumentsService {
     @Inject(ConfigService) config: ConfigService,
     private readonly rag: RagService,
   ) {
-    this.documentsDir = config.get<string>('DOCUMENTS_DIR') ?? './data/documents';
+    this.documentsDir = resolve(config.get<string>('DOCUMENTS_DIR') ?? './data/documents');
   }
 
   async list(clinicId: string, patientId: string) {

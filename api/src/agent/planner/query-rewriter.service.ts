@@ -34,11 +34,21 @@ export class QueryRewriterService {
         ? parsed.queries.filter((q): q is string => typeof q === 'string')
         : [];
       const cleaned = this.clean(queries.length > 0 ? queries : [question]);
-      return { queries: cleaned };
+      return { queries: cleaned, modelUsage: this.modelUsage(res) };
     } catch (err) {
       this.logger.warn(`rewrite fallback: ${(err as Error).message}`);
       return { queries: this.clean([question]) };
     }
+  }
+
+  private modelUsage(res: Awaited<ReturnType<ModelGatewayService['complete']>>) {
+    return {
+      model: res.model,
+      tokensIn: res.tokensIn,
+      tokensOut: res.tokensOut,
+      latencyMs: res.latencyMs,
+      fallbackModelUsed: res.fallbackModelUsed,
+    };
   }
 
   private clean(queries: string[]): string[] {

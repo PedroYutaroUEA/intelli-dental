@@ -711,6 +711,53 @@ export interface AgentStepEvent {
   data?: unknown;
 }
 
+export interface AgentTraceStep {
+  id: string;
+  runId: string;
+  seq: number;
+  type: string;
+  model?: string | null;
+  tokensIn?: number | null;
+  tokensOut?: number | null;
+  durationMs?: number | null;
+  input?: unknown;
+  output?: unknown;
+  error?: unknown;
+  createdAt?: string;
+}
+
+export interface AgentRetrievedChunkTrace {
+  id: string;
+  stepId?: string | null;
+  chunkId: string;
+  source: string;
+  chunkIndex: number;
+  distance?: number | null;
+  score?: number | null;
+}
+
+export interface AgentRunTrace {
+  run: {
+    id: string;
+    question: string;
+    intent?: string | null;
+    fallbackUsed?: boolean | null;
+    insufficientEvidence?: boolean | null;
+    totalLatencyMs?: number | null;
+    createdAt?: string;
+  };
+  steps: AgentTraceStep[];
+  chunks: AgentRetrievedChunkTrace[];
+  evaluations: unknown[];
+  tools: unknown[];
+}
+
+export const agentApi = {
+  getRun(runId: string) {
+    return request<AgentRunTrace>(`/agent/runs/${runId}`);
+  },
+};
+
 export interface AgentPreviewEvent {
   type: "preview";
   toolCall: {

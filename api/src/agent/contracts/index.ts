@@ -1,4 +1,4 @@
-import type { ChatActionDto } from '../../chat/dto/chat-action.dto';
+import type { ChatActionDto, ChatActionKind } from '../../chat/dto/chat-action.dto';
 
 export type Intent =
   | 'direct_answer'
@@ -65,11 +65,13 @@ export interface IntentResult {
   reason: string;
   action?: ChatActionDto;
   localMessage?: string;
+  modelUsage?: ModelUsage;
 }
 
 export interface RewriteResult {
   queries: string[];
   normalizedEntities?: Record<string, string>;
+  modelUsage?: ModelUsage;
 }
 
 export interface RetrievedChunk {
@@ -88,6 +90,7 @@ export interface ContextEvaluation {
   missing: string[];
   suggestedQuery?: string;
   method: 'cosine' | 'llm' | 'hybrid';
+  modelUsage?: ModelUsage;
 }
 
 export interface VerificationResult {
@@ -97,6 +100,7 @@ export interface VerificationResult {
   unsupportedClaims: string[];
   action: 'pass' | 'regenerate' | 'downgrade';
   method: 'cosine' | 'llm' | 'hybrid';
+  modelUsage?: ModelUsage;
 }
 
 export interface AgentStep {
@@ -119,6 +123,40 @@ export interface ToolCall {
   name: string;
   args: Record<string, unknown>;
   mode: 'preview' | 'commit';
+}
+
+export interface ToolInputPropertySchema {
+  type: 'string' | 'integer' | 'number' | 'boolean' | 'array' | 'object';
+  description?: string;
+  format?: string;
+  minimum?: number;
+  maximum?: number;
+  maxLength?: number;
+}
+
+export interface ToolInputSchema {
+  type: 'object';
+  properties: Record<string, ToolInputPropertySchema>;
+  required: string[];
+  additionalProperties: boolean;
+}
+
+export interface ToolManifestExample {
+  description?: string;
+  mode: 'preview' | 'commit';
+  args: Record<string, unknown>;
+}
+
+export interface ToolManifestEntry {
+  name: string;
+  kind: ChatActionKind;
+  description: string;
+  requiredPermission: string;
+  mutating: boolean;
+  confirmationRequired: boolean;
+  defaultMode: 'preview' | 'commit';
+  inputSchema: ToolInputSchema;
+  examples: ToolManifestExample[];
 }
 
 export type ZodTypeAny = {
@@ -185,6 +223,7 @@ export interface PlannedStep {
 export interface QueryPlan {
   steps: PlannedStep[];
   strategy: 'single' | 'sequential';
+  modelUsage?: ModelUsage;
 }
 
 export interface GeneratedAnswer {
@@ -192,6 +231,7 @@ export interface GeneratedAnswer {
   citations: Citation[];
   tokensIn?: number;
   tokensOut?: number;
+  modelUsage?: ModelUsage;
 }
 
 export interface RetrievalFilters {
@@ -241,6 +281,14 @@ export interface ModelRequest {
 export interface ModelResponse {
   text: string;
   parsedJson?: unknown;
+  model: string;
+  tokensIn: number;
+  tokensOut: number;
+  latencyMs: number;
+  fallbackModelUsed: boolean;
+}
+
+export interface ModelUsage {
   model: string;
   tokensIn: number;
   tokensOut: number;

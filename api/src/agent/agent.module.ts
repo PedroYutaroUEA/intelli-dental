@@ -19,6 +19,7 @@ import { HeuristicRouter } from './router/heuristic-router';
 import { IntentRouterService } from './router/intent-router.service';
 import { AgentTracingService } from './tracing/agent-tracing.service';
 import { RetrieverTool } from './tools/retriever.tool';
+import { PostgresRetrieverService } from './tools/postgres-retriever.service';
 import { ToolRegistryService } from './tools/tool-registry.service';
 import { AnswerVerifierService } from './verifiers/answer-verifier.service';
 
@@ -35,6 +36,7 @@ import { AnswerVerifierService } from './verifiers/answer-verifier.service';
     QueryRewriterService,
     AnswerGeneratorService,
     RetrieverTool,
+    PostgresRetrieverService,
     ToolRegistryService,
     ContextEvaluatorService,
     AnswerVerifierService,
