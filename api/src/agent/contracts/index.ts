@@ -159,6 +159,14 @@ export interface ToolManifestEntry {
   examples: ToolManifestExample[];
 }
 
+export interface ToolSelectionResult {
+  tool: string | null;
+  action?: ChatActionDto;
+  missingArgs: string[];
+  message?: string;
+  modelUsage?: ModelUsage;
+}
+
 export type ZodTypeAny = {
   parse?: (input: unknown) => unknown;
   safeParse?: (input: unknown) => unknown;

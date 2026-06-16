@@ -479,4 +479,108 @@ describe('AgentOrchestrator', () => {
     assert.equal(events.some((event) => event.type === 'sources'), true);
     assert.equal(events.some((event) => event.type === 'metrics'), true);
   });
+
+  it('uses tool selection to preview a natural-language appointment create request', async () => {
+    const events: AgentStreamEvent[] = [];
+    const executedActions: unknown[] = [];
+    const selectedAction = {
+      kind: 'create' as const,
+      mode: 'preview' as const,
+      args: {
+        dentistId: '22222222-2222-4222-8222-222222222222',
+        startsAt: '2026-07-10T14:00:00.000Z',
+        durationMinutes: 45,
+      },
+    };
+    const orchestrator = new AgentOrchestrator(
+      {
+        appendMessage: async () => undefined,
+        touchSession: async () => undefined,
+      } as any,
+      {
+        execute: async (_ctx: AgentContext, action: unknown) => {
+          executedActions.push(action);
+          return {
+            call: {
+              id: 'run-tool:create',
+              name: 'appointment.create',
+              args: selectedAction.args,
+              mode: 'preview',
+            },
+            result: {
+              message: 'Criar agendamento em 10/07/2026, 14:00 (45 min).',
+              mutated: false,
+              render: {
+                message: 'Criar agendamento em 10/07/2026, 14:00 (45 min).',
+                action: selectedAction,
+              },
+            },
+          };
+        },
+      } as any,
+      {} as any,
+      {
+        classify: async () => ({
+          intent: 'action_request',
+          confidence: 0.9,
+          needsRetrieval: false,
+          needsTool: true,
+          reason: 'llm',
+        }),
+      } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      new SanitizerService(),
+      {
+        startRun: async () => ({ id: 'run-tool' }),
+        recordStep: async () => undefined,
+        recordTool: async () => undefined,
+        finishRun: async () => undefined,
+      } as any,
+      flags as any,
+      undefined,
+      undefined,
+      undefined,
+      {
+        select: async () => ({
+          tool: 'appointment.create',
+          action: selectedAction,
+          missingArgs: [],
+          modelUsage: {
+            model: 'phi3:mini',
+            tokensIn: 10,
+            tokensOut: 6,
+            latencyMs: 25,
+            fallbackModelUsed: false,
+          },
+        }),
+      } as any,
+    );
+
+    const res = await orchestrator.run(
+      {
+        question: 'Crie uma consulta com esse dentista no dia 10/07 às 14h por 45 minutos',
+        context,
+        budget: {
+          maxLlmCalls: 3,
+          maxRetrievalAttempts: 1,
+          maxWallClockMs: 15000,
+        },
+      },
+      (event) => events.push(event),
+    );
+
+    assert.equal(res.intent, 'action_request');
+    assert.equal(res.fallbackUsed, false);
+    assert.deepEqual(executedActions, [selectedAction]);
+    const preview = events.find(
+      (event): event is Extract<AgentStreamEvent, { type: 'preview' }> =>
+        event.type === 'preview',
+    );
+    assert.ok(preview);
+    assert.equal(preview.toolCall.name, 'appointment.create');
+    assert.equal(preview.toolCall.mode, 'commit');
+  });
 });

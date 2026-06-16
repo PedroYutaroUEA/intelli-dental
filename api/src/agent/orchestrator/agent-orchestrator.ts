@@ -21,6 +21,7 @@ import { QueryRewriterService } from '../planner/query-rewriter.service';
 import { IntentRouterService } from '../router/intent-router.service';
 import { AgentTracingService } from '../tracing/agent-tracing.service';
 import { RetrieverTool } from '../tools/retriever.tool';
+import { ToolSelectorService } from '../tools/tool-selector.service';
 import { ToolRegistryService } from '../tools/tool-registry.service';
 import { AnswerVerifierService } from '../verifiers/answer-verifier.service';
 import { BudgetExceededError } from '../errors';
@@ -52,6 +53,7 @@ export class AgentOrchestrator {
     @Optional() private readonly planner?: QueryPlannerService,
     @Optional() private readonly generator?: AnswerGeneratorService,
     @Optional() private readonly memory?: MemoryService,
+    @Optional() private readonly toolSelector?: ToolSelectorService,
   ) {}
 
   async run(
@@ -202,9 +204,71 @@ export class AgentOrchestrator {
             startedAt,
           });
         }
-        const action = route.action;
-        if (!action) throw new Error('Action route missing action payload');
         const toolStartedAt = Date.now();
+        let action = route.action;
+        if (!action) {
+          this.assertBudget(startedAt, req.budget);
+          this.assertLlmBudget(llmCalls, req.budget);
+          emitStep({ type: 'step', step: 'tool', data: { phase: 'select' } });
+          if (!this.toolSelector) {
+            assistantText = 'Não consegui escolher uma ferramenta para executar esse pedido.';
+            emit({ type: 'token', token: assistantText });
+            await record('tool', toolStartedAt, { tool: null, reason: 'tool_selector_unavailable' }, { question });
+            verification = {
+              faithful: true,
+              groundedness: 1,
+              citationsOk: true,
+              unsupportedClaims: [],
+              action: 'pass',
+              method: 'cosine',
+            };
+            return await this.finish({
+              runId: run.id,
+              sessionId: ctx.sessionId,
+              question,
+              answer: assistantText,
+              intent,
+              citations: [],
+              verification,
+              fallbackUsed,
+              insufficientEvidence,
+              metrics,
+              startedAt,
+            });
+          }
+          const selection = await this.toolSelector.select(question, ctx);
+          llmCalls += 1;
+          await record('tool', toolStartedAt, selection, { question, phase: 'select' });
+          emitStep({ type: 'step', step: 'tool', data: selection });
+          if (!selection.action) {
+            assistantText =
+              selection.message ??
+              'Não consegui montar a ação com os dados informados.';
+            emit({ type: 'token', token: assistantText });
+            verification = {
+              faithful: true,
+              groundedness: 1,
+              citationsOk: true,
+              unsupportedClaims: [],
+              action: 'pass',
+              method: 'cosine',
+            };
+            return await this.finish({
+              runId: run.id,
+              sessionId: ctx.sessionId,
+              question,
+              answer: assistantText,
+              intent,
+              citations: [],
+              verification,
+              fallbackUsed,
+              insufficientEvidence,
+              metrics,
+              startedAt,
+            });
+          }
+          action = selection.action;
+        }
         emitStep({ type: 'step', step: 'tool', data: { kind: action.kind, mode: action.mode } });
         const { call: toolCall, result } = await this.tools.execute(
           ctx,

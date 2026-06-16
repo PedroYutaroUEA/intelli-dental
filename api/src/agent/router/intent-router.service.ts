@@ -48,6 +48,7 @@ export class IntentRouterService {
           intent === 'database_query' ||
           intent === 'document_summary' ||
           intent === 'multi_step_question' ||
+          intent === 'action_request' ||
           intent === 'unsupported') &&
         confidence >= 0.65
       ) {
@@ -58,7 +59,7 @@ export class IntentRouterService {
             intent === 'knowledge_base_search' ||
             intent === 'document_summary' ||
             intent === 'multi_step_question',
-          needsTool: intent === 'database_query',
+          needsTool: intent === 'database_query' || intent === 'action_request',
           reason: String(parsed?.reason ?? 'llm'),
           modelUsage: this.modelUsage(res),
         };

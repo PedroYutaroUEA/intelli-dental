@@ -46,6 +46,7 @@ Schema: {"faithful":<bool>,"groundedness":<0..1>,"citationsOk":<bool>,"unsupport
 ${JSON_SUFFIX}`,
   tool_select: `Escolha a ferramenta apropriada para executar a INTENÇÃO, dentre a LISTA DE FERRAMENTAS fornecida.
 Use apenas nomes válidos. NÃO invente argumentos ausentes; marque-os como faltantes. Para ferramentas que alteram dados, NUNCA execute: apenas proponha mode="preview".
+Se o usuário informar o nome do dentista para criar agendamento, preencha dentistName exatamente como informado; NÃO invente dentistId.
 Schema: {"tool":<nome|null>,"args":{...},"missingArgs":[<string>...],"mode":"preview"|"commit"}
 ${JSON_SUFFIX}`,
 };

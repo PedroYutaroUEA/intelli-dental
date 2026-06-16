@@ -161,7 +161,7 @@ export class ToolRegistryService {
     };
     const propertyNamesByKind: Record<ChatActionKind, string[]> = {
       list_upcoming: ['limit'],
-      create: ['dentistId', 'startsAt', 'durationMinutes', 'reason'],
+      create: ['dentistId', 'dentistName', 'startsAt', 'durationMinutes', 'reason'],
       reschedule: ['appointmentId', 'startsAt', 'durationMinutes'],
       cancel: ['appointmentId', 'reason'],
       approve: ['appointmentId'],
@@ -190,7 +190,12 @@ export class ToolRegistryService {
       dentistId: {
         type: 'string',
         format: 'uuid',
-        description: 'ID do dentista responsável pelo agendamento.',
+        description: 'ID do dentista responsável pelo agendamento. Use dentistName quando o usuário informar apenas o nome.',
+      },
+      dentistName: {
+        type: 'string',
+        maxLength: 200,
+        description: 'Nome do dentista na clínica. Pode substituir dentistId em linguagem natural.',
       },
       startsAt: {
         type: 'string',
@@ -228,7 +233,7 @@ export class ToolRegistryService {
         {
           mode: 'preview',
           args: {
-            dentistId,
+            dentistName: 'Dra. Ana Silva',
             startsAt: '2026-07-10T14:00:00.000Z',
             durationMinutes: 45,
             reason: 'limpeza',

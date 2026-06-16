@@ -81,6 +81,7 @@ describe('ToolRegistryService manifest', () => {
       'durationMinutes',
     ]);
     assert.equal(create.inputSchema.properties.dentistId.format, 'uuid');
+    assert.equal(create.inputSchema.properties.dentistName.type, 'string');
     assert.equal(create.inputSchema.properties.startsAt.format, 'date-time');
     assert.equal(create.inputSchema.properties.durationMinutes.minimum, 5);
     assert.equal(create.inputSchema.properties.durationMinutes.maximum, 480);
